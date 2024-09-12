@@ -25,3 +25,13 @@ target_link_libraries(${PROJECT_NAME}
 stm32_print_size_of_target(${PROJECT_NAME})
 stm32_generate_binary_file(${PROJECT_NAME})
 
+add_custom_command(
+    OUTPUT stm32_flashed
+    DEPENDS ${PROJECT_NAME}
+    COMMAND st-flash --reset write
+        ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.bin
+        0x08000000
+    VERBATIM
+)
+add_custom_target(flash DEPENDS stm32_flashed)
+

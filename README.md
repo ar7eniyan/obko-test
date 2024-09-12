@@ -9,12 +9,14 @@ cmake -DSTM32_CUBE_<family>_PATH=<cube_path> -DSTM32_TOOLCHAIN_PATH=<toolchain_p
 # <family> is F0, F1, ... H7, WL
 ```
 
-Build:
+Build/flash:
 ```
 cmake --build build
+# or
+cmake --build build -t flash
 ```
 
-Flash:
+Flash (manually):
 ```
 st-flash --reset write build/obko-test.bin 0x08000000
 ```
