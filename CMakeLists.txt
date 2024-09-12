@@ -6,6 +6,7 @@ set(PROJECT_NAME ${BASE_FOLDER})
 project(${PROJECT_NAME} C ASM)
 
 find_package(CMSIS COMPONENTS STM32H743VI_M7 REQUIRED)
+find_package(FreeRTOS COMPONENTS ARM_CM7 STM32H7)
 
 set(PROJECT_SOURCES
     src/main.c
@@ -14,6 +15,8 @@ set(PROJECT_SOURCES
 add_executable(${PROJECT_NAME} ${PROJECT_SOURCES})
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(${PROJECT_NAME}
+    FreeRTOS::STM32::H7::M7::ARM_CM7
+    FreeRTOS::STM32::H7::M7::Heap::4
     CMSIS::STM32::H743VI::M7
     STM32::Nano
     STM32::NoSys

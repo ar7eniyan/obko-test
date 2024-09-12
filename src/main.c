@@ -1,7 +1,9 @@
-#include "stm32h743xx.h"
-#include <cmsis_gcc.h>
 #include <stdint.h>
-#include <system_stm32h7xx.h>
+
+#include "FreeRTOS.h"
+#include "task.h"
+#include "stm32h743xx.h"
+#include "system_stm32h7xx.h"
 
 
 void setup_clocks(void)
@@ -55,10 +57,8 @@ void setup_clocks(void)
     SystemCoreClockUpdate();
 }
 
-int main(void)
+void vBlinkTask(void *pvParameters)
 {
-    setup_clocks();
-
     RCC->AHB4ENR |= RCC_AHB4ENR_GPIOEEN;
     for (volatile int delay = 1000; delay--; ) {}
     // 01 = GPIO output mode
@@ -67,14 +67,29 @@ int main(void)
 
     for (;;) {
         GPIOE->BSRR = GPIO_BSRR_BS3;
-        for (volatile int delay = 20000000; delay--; ) {
-            __NOP();
-        }
+        vTaskDelay(pdMS_TO_TICKS(1000));
         GPIOE->BSRR = GPIO_BSRR_BR3;
-        for (volatile int delay = 20000000; delay--; ) {
-            __NOP();
-        }
+        vTaskDelay(pdMS_TO_TICKS(1000));
     }
+
+    vTaskDelete(NULL);
+}
+
+int main(void)
+{
+    setup_clocks();
+    xTaskCreate(vBlinkTask, "blink", 128, NULL, tskIDLE_PRIORITY + 5, NULL);
+
+    vTaskStartScheduler();
+    // The function above returns only if something calls vTaskEndScheduler().
+    // The choice here is to treat as a bug and hang the CPU.
+    for(;;);
     return 0;
 }
+
+// TODO: write them properly
+void vApplicationTickHook(void) {}
+void vApplicationIdleHook(void) {}
+void vApplicationMallocFailedHook(void) {}
+void vApplicationStackOverflowHook(void) {}
 
