@@ -9,10 +9,10 @@ cmake -DSTM32_CUBE_<family>_PATH=<cube_path> -DSTM32_TOOLCHAIN_PATH=<toolchain_p
 # <family> is F0, F1, ... H7, WL
 ```
 
-Build/flash:
+Build:
 ```
 cmake --build build
-# or
+# or (to build and then flash with st-flash)
 cmake --build build -t flash
 ```
 
