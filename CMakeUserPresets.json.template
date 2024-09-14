@@ -1,0 +1,30 @@
+{
+  "version": 4,
+  "configurePresets": [
+    {
+      "name": "default",
+      "binaryDir": "build",
+      "cacheVariables": {
+        // Modify if needed
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        // Insert the paths to your components
+        // <family> is F0, F1, ..., H7, WL
+        "STM32_CUBE_<family>_PATH": "<path>",
+        "STM32_TOOLCHAIN_PATH": "<path>"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "default",
+      "configurePreset": "default"
+    },
+    {
+      "name": "flash",
+      "configurePreset": "default",
+      "targets": "flash"
+    }
+  ]
+}
+

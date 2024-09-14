@@ -3,17 +3,21 @@
 - STM32Cube package for your MCU family like the one STM32CubeIDE downloads from a repository
 
 ### Build process
+Create your `CMakeUserPresets.json`:
+- `mv CMakeUserPresets.json.template CMakeUserPresets.json`
+- Modify the configure options if you need
+- Fill in `STM32_CUBE_<family>_PATH` and `STM32_TOOLCHAIN_PATH` variables with your paths
+
 Configure:
 ```
-cmake -DSTM32_CUBE_<family>_PATH=<cube_path> -DSTM32_TOOLCHAIN_PATH=<toolchain_path> -S . -B build
-# <family> is F0, F1, ... H7, WL
+cmake --preset default
 ```
 
 Build:
 ```
-cmake --build build
+cmake --build --preset default
 # or (to build and then flash with st-flash)
-cmake --build build -t flash
+cmake --build --preset flash
 ```
 
 Flash (manually):
