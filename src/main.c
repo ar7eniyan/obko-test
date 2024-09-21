@@ -5,14 +5,7 @@
 #include "stm32h743xx.h"
 #include "system_stm32h7xx.h"
 
-#define SET_RCC_xxxxEN(rccreg, mask) \
-do { \
-    __IO uint32_t tmpreg; \
-    (rccreg) |= (mask); \
-    tmpreg = (rccreg); \
-    (void)tmpreg; \
-} while (0)
-
+#include "tools.h"
 
 void setup_clocks(void)
 {
