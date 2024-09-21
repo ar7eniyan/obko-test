@@ -5,6 +5,14 @@
 #include "stm32h743xx.h"
 #include "system_stm32h7xx.h"
 
+#define SET_RCC_xxxxEN(rccreg, mask) \
+do { \
+    __IO uint32_t tmpreg; \
+    (rccreg) |= (mask); \
+    tmpreg = (rccreg); \
+    (void)tmpreg; \
+} while (0)
+
 
 void setup_clocks(void)
 {
@@ -59,8 +67,7 @@ void setup_clocks(void)
 
 void vBlinkTask(void *pvParameters)
 {
-    RCC->AHB4ENR |= RCC_AHB4ENR_GPIOEEN;
-    for (volatile int delay = 1000; delay--; ) {}
+    SET_RCC_xxxxEN(RCC->AHB4ENR, RCC_AHB4ENR_GPIOEEN);
     // 01 = GPIO output mode
     GPIOE->MODER &= ~GPIO_MODER_MODE3_1;
     GPIOE->MODER |= GPIO_MODER_MODE3_0;
