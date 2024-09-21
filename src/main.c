@@ -6,6 +6,7 @@
 #include "system_stm32h7xx.h"
 
 #include "tools.h"
+#include "motors.h"
 
 void setup_clocks(void)
 {
@@ -43,6 +44,9 @@ void setup_clocks(void)
     // HPRE prescaler to 2, D1PPRE prescaler to 2, wait for clock propagation
     RCC->D1CFGR = (0b100 << RCC_D1CFGR_D1PPRE_Pos) | (0b1000 << RCC_D1CFGR_HPRE_Pos);
     // D2PPRE1 prescaler to 2, D2PPRE2 prescaler to 2
+    // That means timer clocks will be two times faster than their bus clocks
+    // (equal to AHB clocks, 240 Mhz in this case).
+    // See Table 57 in RM for reference.
     RCC->D2CFGR = (0b100 << RCC_D2CFGR_D2PPRE1_Pos) | (0b100 << RCC_D2CFGR_D2PPRE2_Pos);
     // D3PPRE prescaler to 2
     RCC->D3CFGR = (0b100 << RCC_D3CFGR_D3PPRE_Pos);
@@ -78,6 +82,11 @@ void vBlinkTask(void *pvParameters)
 int main(void)
 {
     setup_clocks();
+    setup_hrtim();
+    HRTIM1_TIMA->PERxR = 1200;
+    HRTIM1_TIMB->PERxR = 1200;
+    HRTIM1_TIMC->PERxR = 1200;
+
     xTaskCreate(vBlinkTask, "blink", 128, NULL, tskIDLE_PRIORITY + 5, NULL);
 
     vTaskStartScheduler();

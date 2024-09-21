@@ -10,6 +10,7 @@ find_package(FreeRTOS COMPONENTS ARM_CM7 STM32H7)
 
 set(PROJECT_SOURCES
     src/main.c
+    src/motors.c
 )
 
 add_executable(${PROJECT_NAME} ${PROJECT_SOURCES})
