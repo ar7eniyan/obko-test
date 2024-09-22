@@ -7,6 +7,7 @@
 
 #include "tools.h"
 #include "motors.h"
+#include "ethernet.h"
 
 void setup_clocks(void)
 {
@@ -82,6 +83,7 @@ void vBlinkTask(void *pvParameters)
 int main(void)
 {
     setup_clocks();
+    setup_ethernet();
     setup_hrtim();
     HRTIM1_TIMA->PERxR = 1200;
     HRTIM1_TIMB->PERxR = 1200;
