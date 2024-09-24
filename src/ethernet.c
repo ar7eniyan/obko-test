@@ -103,28 +103,34 @@ void setup_ethernet(void)
     // Use reset values for DMA AHB settings
     ETH->DMASBMR = 0;
 
+    // Start reading on a full packet retrival (Store and Forward mode). That
+    // means we aren't able to receive packets larger than the queue size.
+    // Rx queue size is read-only and is equal to 2048 bytes.
+    ETH->MTLRQOMR |= ETH_MTLRQOMR_RSF;
+    // Start transmission on a full packet retrival (Store and Forward mode).
+    // Tx queue size is (0b111 + 1) * 256 = 2048 bytes, and we can't transmit
+    // packets larger than that because of TSF bit being set, but nor we have
+    // to worry about MTL underflows. (analogous to the Rx queue situation
+    // described above). Enable the Tx queue (write 0b10 to TXQEN).
+    ETH->MTLTQOMR |= ETH_MTLTQOMR_TSF | (0b111 << 16) | (0b10 << 2);
+
     // MDIO clock is eth_hclk (AHB1 clock) / 102.
     // The recommended AHB1 clock range for this configuration is 150-250 MHz.
     ETH->MACMDIOAR = (0b0100 << ETH_MACMDIOAR_CR_Pos);
-
-    // Start transmission on a full packet retrival (Store and Forward mode)
-    // Tx queue size is (0b111 + 1) * 256 = 2048 bytes
-    ETH->MTLTQOMR |= ETH_MTLTQOMR_TSF | (0b111 << 16);
-    // Enable the Tx queue (write 0b10 to TXQEN)
-    MODIFY_REG(ETH->MTLTQOMR, 0b11 << 2, 0b10);
-    // Start reading on a full packet retrival (Store and Forward mode)
-    // Rx queue size is (0b111 + 1) * 256 = 2048 bytes
-    ETH->MTLRQOMR |= ETH_MTLRQOMR_RSF | (0b111 << 20);
+    // Our MAC address for DA matching
+    ETH->MACA0HR = 0xF0001223;
+    ETH->MACA0LR = 0x456789ab;
+    // MAC packet filtering: drop all broadcast and non-matching to our DA
+    // unicast packets
+    ETH->MACPFR = ETH_MACPFR_DBF;
+    // MAC settings: full duplex, sense carrier before transmitting, strip CRC
+    // from all packets
+    // TODO: deal with SARC
+    ETH->MACCR |= ETH_MACCR_ECRSFD | ETH_MACCR_DM | ETH_MACCR_ACS | ETH_MACCR_CST;
 
     setup_eth_dma();
-
-    // Configure our MAC address
-    ETH->MACA0HR = 0xF0000123;
-    ETH->MACA0LR = 0x456789ab;
-    // Configure MAC settings
-    ETH->MACCR |= ETH_MACCR_DM | ETH_MACCR_CST;
     // Enable MAC Tx and Rx
-    // ETH->MACCR |= ETH_MACCR_TE | ETH_MACCR_RE;
+    ETH->MACCR |= ETH_MACCR_TE | ETH_MACCR_RE;
 }
 
 eth_txdesc_t eth_txdesc_global[ETH_TX_RING_LENGTH];
