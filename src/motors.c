@@ -34,6 +34,10 @@ void setup_hrtim(void)
     HRTIM1_TIMB->OUTxR = (0b10 << HRTIM_OUTR_FAULT1_Pos);
     HRTIM1_TIMC->OUTxR = (0b10 << HRTIM_OUTR_FAULT1_Pos);
 
+    // Motor drivers (Rear Left/Right, Steering) GPIO binding:
+    // RL: PUL - PA9 (HRTIM_CHC1), ENA - PD3, DIR - PD5, ALM - PD4 (HRTIM_FLT3)
+    // RR: PUL - PC8 (HRTIM_CHB1), ENA - PD7, DIR - PD6, ALM - PB3 (HRTIM_FLT4)
+    // ST: PUL - PC6 (HRTIM_CHA1), ENA - PC7, DIR - PC9
     // Timer output GPIO binding:
     // CHA1 - AF1 on PC6, CHB1 - AF1 on PC8, CHC1 - AF2 on PA9.
     // Use default GPIO settings except for AF: push-pull output type, low
