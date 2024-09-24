@@ -5,7 +5,8 @@
       "name": "default",
       "binaryDir": "build",
       "cacheVariables": {
-        // Modify if needed
+        // Modify below if needed.
+        // Remove all comments as json does not allow them.
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
         // Insert the paths to your components
