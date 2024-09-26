@@ -2,3 +2,8 @@ CMakeUserPresets.json
 build/
 .cache/
 
+.vscode
+**/desktop.ini
+
+# Hide all files starts "~$"
+**/~$*.*
