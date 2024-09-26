@@ -8,6 +8,7 @@
 #include "tools.h"
 #include "motors.h"
 #include "ethernet.h"
+#include "i2c.h"
 
 void setup_clocks(void)
 {
