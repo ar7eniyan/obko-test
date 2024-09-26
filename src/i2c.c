@@ -4,6 +4,7 @@
 #include "stm32h743xx.h"
 
 #include "tools.h"
+#include "i2c.h"
 
 
 void setup_i2c(void) {
@@ -28,19 +29,32 @@ void setup_i2c(void) {
     MODIFY_REG(GPIOB->PUPDR,
         GPIO_PUPDR_PUPD6 | GPIO_PUPDR_PUPD7,
         (0b00 << GPIO_PUPDR_PUPD6_Pos | 0b00 << GPIO_PUPDR_PUPD7_Pos));
-    // AF4
+    // AF4.
     MODIFY_REG(GPIOB->AFR[0],
         GPIO_AFRL_AFSEL6 | GPIO_AFRL_AFSEL7,
         (0b0100 << GPIO_AFRL_AFSEL6_Pos | 0b0100 << GPIO_AFRL_AFSEL6_Pos));
 
-    I2C1->CR1 &= ~(I2C_CR1_GCEN | I2C_CR1_NOSTRETCH);   // General call disable; Clock stretching enabled
-    I2C1->CR1 &= ~I2C_CR1_PE;                           // Peripheral Disable.
-    I2C1->TIMINGR = (uint32_t)0x00B03FDB;               // 400kHz, From CubeMX.
-    I2C1->OAR1 |= I2C_OAR1_OA1EN |                      // Own address 1 enable.
-        (0x33) << 1;                                    // Interface own slave address. 7-bit
-    I2C1->CR1 |= I2C_CR1_PE;                            // Peripheral Enaable.
-    I2C1->CR2 = I2C_CR2_AUTOEND |                       // Automatic STOP.
-        (1 << 16) |
-        (I2C_CR2_SADD << 1);
+    I2C1->CR1 &= ~I2C_CR1_PE;                   // Peripheral Disable.
+    
+    I2C1->CR1 &= ~(I2C_CR1_ANFOFF |             // Analog noise filter disabled.
+        (0b0000 << I2C_CR1_DNF_Pos));           // Digital filter disabled.
+    I2C1->TIMINGR = I2C_TIMINGR;                // 400kHz, From CubeMX.
+    I2C1->CR1 &= ~I2C_CR1_NOSTRETCH;            // Clock stretching enabled.
+    I2C1->CR2 |= I2C_CR2_AUTOEND;               // Automatic end mode (auto STOP).
+        
+    I2C1->CR1 |= I2C_CR1_PE;                    // Peripheral Enable.
 }
 
+void i2c_master_transmit(uint8_t addr, const uint8_t *data, uint32_t num, bool xfer_pending) {
+    // 1. Master generates START condition
+    // 2. Master addresses the Slave as Master Transmitter
+    // 3. Master transmits data to the addressed Slave
+    // 4. Master generates STOP condition (if xfer_pending is "false")
+
+    I2C1->CR2 |= (num << I2C_CR2_NBYTES_Pos |
+        (addr << I2C_CR2_SADD_Pos) |
+        (I2C_CR2_RD_WRN));                      // Master requests a read transfer
+    I2C1->CR2 |= I2C_CR2_START;
+    // while (!I2C1->ISR | I2C_ISR_TXE);
+    I2C1->TXDR = data;
+}
