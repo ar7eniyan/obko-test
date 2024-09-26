@@ -24,7 +24,7 @@ void setup_i2c(void) {
 	
 	I2C1->CR1 &= ~(I2C_CR1_GCEN | I2C_CR1_NOSTRETCH);	// General call disable; Clock stretching enabled
 	I2C1->CR1 &= ~I2C_CR1_PE;							// Peripheral Disable.
-	I2C1->TIMIGR = (uint32_t)0x00B03FDB;				// 400kHz, From CubeMX.
+	I2C1->TIMINGR = (uint32_t)0x00B03FDB;				// 400kHz, From CubeMX.
 	I2C1->OA1 |= I2C_OA1_OA1EN |						// Own address 1 enable.
 		(0x33) << 1;									// Interface own slave address. 7-bit
 	I2C1->CR1 |= I2C_CR1_PE;							// Peripheral Enaable.
