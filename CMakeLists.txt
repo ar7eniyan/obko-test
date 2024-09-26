@@ -12,6 +12,7 @@ set(PROJECT_SOURCES
     src/main.c
     src/ethernet.c
     src/motors.c
+    src/i2c.c
 )
 
 add_executable(${PROJECT_NAME} ${PROJECT_SOURCES})
@@ -36,4 +37,3 @@ add_custom_command(
     VERBATIM
 )
 add_custom_target(flash DEPENDS stm32_flashed)
-
