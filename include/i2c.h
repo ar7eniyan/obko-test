@@ -2,6 +2,7 @@
 #define INCLUDE_I2C_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #include "stm32h7xx.h"
 #include "stm32h743xx.h"
@@ -16,6 +17,6 @@
 
 
 void setup_i2c(void);
-void i2c_master_transmit (uint8_t addr, const uint8_t * data, uint32_t num, bool xfer_pending);
+void i2c_master_transmit(uint8_t addr, const char * data, uint32_t num, bool xfer_pending);
 
-#endif	// #ifndef INCLUDE_I2C_H
+#endif  // #ifndef INCLUDE_I2C_H

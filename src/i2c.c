@@ -35,17 +35,17 @@ void setup_i2c(void) {
         (0b0100 << GPIO_AFRL_AFSEL6_Pos | 0b0100 << GPIO_AFRL_AFSEL6_Pos));
 
     I2C1->CR1 &= ~I2C_CR1_PE;                   // Peripheral Disable.
-    
+
     I2C1->CR1 &= ~(I2C_CR1_ANFOFF |             // Analog noise filter disabled.
         (0b0000 << I2C_CR1_DNF_Pos));           // Digital filter disabled.
     I2C1->TIMINGR = I2C_TIMINGR;                // 400kHz, From CubeMX.
     I2C1->CR1 &= ~I2C_CR1_NOSTRETCH;            // Clock stretching enabled.
     I2C1->CR2 |= I2C_CR2_AUTOEND;               // Automatic end mode (auto STOP).
-        
+
     I2C1->CR1 |= I2C_CR1_PE;                    // Peripheral Enable.
 }
 
-void i2c_master_transmit(uint8_t addr, const uint8_t *data, uint32_t num, bool xfer_pending) {
+void i2c_master_transmit(uint8_t addr, const char *data, uint32_t num, bool xfer_pending) {
     // 1. Master generates START condition
     // 2. Master addresses the Slave as Master Transmitter
     // 3. Master transmits data to the addressed Slave
@@ -56,5 +56,6 @@ void i2c_master_transmit(uint8_t addr, const uint8_t *data, uint32_t num, bool x
         (I2C_CR2_RD_WRN));                      // Master requests a read transfer
     I2C1->CR2 |= I2C_CR2_START;
     // while (!I2C1->ISR | I2C_ISR_TXE);
-    I2C1->TXDR = data;
+    I2C1->TXDR = (uint32_t)data;
 }
+
