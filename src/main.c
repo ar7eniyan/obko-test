@@ -68,7 +68,7 @@ void setup_clocks(void)
 void vBlinkTask(void *pvParameters)
 {
     char test_data_i2c[6] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66};
-    char test_data_uart[6]= ["Hello\n"];
+    char *test_data_uart = "Hello\n";
 
     SET_RCC_xxxxEN(RCC->AHB4ENR, RCC_AHB4ENR_GPIOEEN);
     // 01 = GPIO output mode
@@ -91,7 +91,7 @@ void vBlinkTask(void *pvParameters)
 int main(void)
 {
     setup_clocks();
-    setup_ethernet();
+    // setup_ethernet();
     setup_hrtim();
     setup_i2c();
     setup_uart();

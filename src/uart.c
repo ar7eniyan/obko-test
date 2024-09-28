@@ -49,10 +49,11 @@ void uart_send_byte(char data) {
 }
 
 void uart_send_string(char* str) {
-    uint8_t = 0;
+    uint8_t i = 0;
+    USART1->CR1 |= USART_CR1_TE;
 
     while (str[i]) {
         uart_send_byte (str[i++]);
     }
-    while(!(USART1->ISR & USART_ISR_TC))        // Wait Transmission Complete.
+    while(!(USART1->ISR & USART_ISR_TC));        // Wait Transmission Complete.
 }

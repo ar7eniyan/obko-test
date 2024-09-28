@@ -13,6 +13,7 @@ set(PROJECT_SOURCES
     src/ethernet.c
     src/motors.c
     src/i2c.c
+    src/uart.c
 )
 
 add_executable(${PROJECT_NAME} ${PROJECT_SOURCES})
