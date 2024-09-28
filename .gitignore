@@ -3,7 +3,9 @@ build/
 .cache/
 
 .vscode/
+.settings/
 **/desktop.ini
 
 # Hide all files starts "~$"
 **/~$*.*
+
