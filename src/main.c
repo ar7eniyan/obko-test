@@ -9,6 +9,7 @@
 #include "motors.h"
 #include "ethernet.h"
 #include "i2c.h"
+#include "uart.h"
 
 void setup_clocks(void)
 {
@@ -66,12 +67,18 @@ void setup_clocks(void)
 
 void vBlinkTask(void *pvParameters)
 {
+    char test_data_i2c[6] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66};
+    char test_data_uart[6]= ["Hello\n"];
+
     SET_RCC_xxxxEN(RCC->AHB4ENR, RCC_AHB4ENR_GPIOEEN);
     // 01 = GPIO output mode
     GPIOE->MODER &= ~GPIO_MODER_MODE3_1;
     GPIOE->MODER |= GPIO_MODER_MODE3_0;
-
+    
     for (;;) {
+        i2c_master_transmit(0x11, test_data_i2c, sizeof(test_data_i2c), true);
+        uart_send_string(test_data_uart);
+
         GPIOE->BSRR = GPIO_BSRR_BS3;
         vTaskDelay(pdMS_TO_TICKS(1000));
         GPIOE->BSRR = GPIO_BSRR_BR3;
@@ -86,6 +93,8 @@ int main(void)
     setup_clocks();
     setup_ethernet();
     setup_hrtim();
+    setup_i2c();
+    setup_uart();
     HRTIM1_TIMA->PERxR = 1200;
     HRTIM1_TIMB->PERxR = 1200;
     HRTIM1_TIMC->PERxR = 1200;
