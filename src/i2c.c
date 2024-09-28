@@ -1,9 +1,3 @@
-#include <stdint.h>
-
-#include "stm32h7xx.h"
-#include "stm32h743xx.h"
-
-#include "tools.h"
 #include "i2c.h"
 
 
@@ -45,15 +39,15 @@ void setup_i2c(void) {
     I2C1->CR1 |= I2C_CR1_PE;                    // Peripheral Enable.
 }
 
-void i2c_master_transmit(uint8_t addr, const uint8_t *data, uint32_t num, bool xfer_pending) {
+void i2c_master_transmit(uint8_t addr, const char *data, uint32_t num, bool xfer_pending) {
     // 1. Master generates START condition
     // 2. Master addresses the Slave as Master Transmitter
     // 3. Master transmits data to the addressed Slave
     // 4. Master generates STOP condition (if xfer_pending is "false")
 
     I2C1->CR2 |= (num << I2C_CR2_NBYTES_Pos |
-        (addr << I2C_CR2_SADD_Pos) |
-        (I2C_CR2_RD_WRN));                      // Master requests a read transfer
+        ((addr << 1) << I2C_CR2_SADD_Pos) |     // Shifted addr << 1 to WRITE.
+        (I2C_CR2_RD_WRN));                      // Master requests a read transfer.
     I2C1->CR2 |= I2C_CR2_START;
     // while (!I2C1->ISR | I2C_ISR_TXE);
     I2C1->TXDR = data;
