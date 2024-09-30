@@ -7,6 +7,7 @@
 
 #include <cmsis_gcc.h>
 
+#define ETH_TX_BUF_LENGTH 1516
 #define ETH_TX_RING_LENGTH 4
 #define ETH_RX_RING_LENGTH 4
 
@@ -187,11 +188,16 @@ static_assert(sizeof(eth_txdesc_t) == 16, "eth_txdesc size is not 16 bytes");
 static_assert(sizeof(eth_rxdesc_t) == 16, "eth_rxdesc size is not 16 bytes");
 
 void setup_ethernet(void);
+int eth_send(char *buf, uint16_t len, char **next_buf);
 
-extern struct {
-    size_t tx_desc_idx;
-    size_t rx_desc_idx;
-} eth_dma_global;
+typedef struct {
+    // Index of the descriptor one past the last one owned by DMA.
+    // NOTE: When equals to 0, DMA is stopped.
+    eth_txdesc_t *tx_start;
+    eth_txdesc_t *tx_end;
+    int extra_buffer_desc_idx;
+    size_t rx_tail_idx;
+} eth_dma_state_t;
 
 extern eth_txdesc_t eth_txdesc_global[ETH_TX_RING_LENGTH] __ALIGNED(4);
 extern eth_rxdesc_t eth_rxdesc_global[ETH_RX_RING_LENGTH] __ALIGNED(4);

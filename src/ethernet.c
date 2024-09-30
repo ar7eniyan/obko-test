@@ -1,17 +1,150 @@
 #include "ethernet.h"
 
+#include <cmsis_gcc.h>
 #include <stdint.h>
 #include <string.h>
 #include <stddef.h>
+#include <strings.h>
 
 #include "stm32h743xx.h"
 #include "stm32h7xx.h"
 
 #include "tools.h"
 
+// DESCRIPTOR TABLE PLACEMENT???
+eth_txdesc_t eth_txdesc_global[ETH_TX_RING_LENGTH] __ALIGNED(4);
+eth_txdesc_t * const eth_txdesc_global_end = &eth_txdesc_global[ETH_TX_RING_LENGTH];
+eth_rxdesc_t eth_rxdesc_global[ETH_RX_RING_LENGTH] __ALIGNED(4);
+char eth_tx_bufs[ETH_TX_BUF_LENGTH][ETH_TX_RING_LENGTH] __ALIGNED(4);
+char eth_tx_buf_extra[ETH_TX_BUF_LENGTH] __ALIGNED(4);
+eth_dma_state_t eth_dma_state_global;
+
+// DMA Tx descriptor ring processing scheme (RD = read, WB = write-back)
+//   head = ETH_DMACT(X)DLAR = desc list address register
+//   curr = ETH_DMACCATXBR = current application tx descriptor register
+//   tail = ETH_DMACT(X)DTPR = desc tail pointer register
+//   start = eth_dma_state_global.tx_start
+//   end = eth_dma_state_global.tx_end
+// Invariants:
+// - end equals to the index one past the latest enqueued descriptor.
+// - start equals to the index of the earliest not freed yet descriptor.
+//   (to free a descriptor means to read the status of its write-back form and
+//   increment the start index)
+//
+// Regular operation:
+// head -> [#0, WB, OWN = 0] - processed <- start
+//         [#1, WB, OWN = 0] - processed
+// curr -> [#2, RD, OWN = 1] - processing
+//         [#3, RD, OWN = 1] - pending
+// tail -> [#4, RD, OWN = 0] - free <- end
+//         [#5, RD, OWN = 0] - free
+//
+// Two write-back descriptors being freed by the app:
+// head -> [#0, RD, OWN = 0] - free
+//         [#1, RD, OWN = 0] - free
+// curr -> [#2, RD, OWN = 1] - processing <- start
+//         [#3, RD, OWN = 1] - pending
+// tail -> [#4, RD, OWN = 0] - free <- end
+//         [#5, RD, OWN = 0] - free
+//
+// A single new packet being enqueued at the end:
+// head -> [#0, RD, OWN = 0] - free
+//         [#1, RD, OWN = 0] - free
+// curr -> [#2, RD, OWN = 1] - processing <- start
+//         [#3, RD, OWN = 1] - pending
+//         [#4, RD, OWN = 0] - pending
+// tail -> [#5, RD, OWN = 0] - free <- end
+//
+
+// TODO: add a safety mechanism
+char *eth_get_first_buffer(void)
+{
+    return eth_tx_bufs[0];
+}
+
+// Minimal to no safety checks
+// TODO: write a list of conditions when it's safe to call this
+int eth_send(char *buf, uint16_t len, char **next_buf)
+{
+    eth_txdesc_t *free_desc, *new_end;
+
+    if (len > ETH_TX_BUF_LENGTH) {
+        return -1;
+    }
+
+    if (eth_dma_state_global.tx_end == eth_txdesc_global_end ||
+        eth_dma_state_global.tx_end == eth_txdesc_global)
+    {
+        free_desc = eth_txdesc_global;
+        new_end = &eth_txdesc_global[1];
+    } else {
+        free_desc = eth_dma_state_global.tx_end;
+        new_end = eth_dma_state_global.tx_end + 1;
+    }
+
+    if (eth_dma_state_global.tx_end != eth_txdesc_global) {
+        while (eth_dma_state_global.tx_start == free_desc ||
+               ETH->DMACCATDR == (uint32_t)new_end);
+    }
+
+    *free_desc = (eth_txdesc_t) { .raw = {0, 0, 0, 0} };
+    free_desc->read.BUF1AP = (uint32_t)buf;
+    free_desc->read.IOC = 1;
+    free_desc->read.HL_B1L = len;
+    free_desc->read.OWN = 1;
+    free_desc->read.FD = 1;
+    free_desc->read.LD = 1;
+    // Inlcude or insert source address (use MAC address register 0)
+    free_desc->read.SAIC = 0b001;
+
+    size_t next_buf_idx;
+    if (eth_dma_state_global.tx_end != eth_txdesc_global_end) {
+        // No wrapping around
+        ETH->DMACTDTPR = (uint32_t)new_end;
+        next_buf_idx = new_end - eth_txdesc_global;
+    } else {
+        next_buf_idx = 0;
+    }
+    eth_dma_state_global.tx_end = new_end;
+
+    // Allocate a buffer for the next eth_send() call
+    if (&eth_txdesc_global[next_buf_idx] != eth_dma_state_global.tx_start) {
+        *next_buf = eth_tx_bufs[next_buf_idx];
+    } else {
+        *next_buf = eth_tx_buf_extra;
+        eth_dma_state_global.extra_buffer_desc_idx = next_buf_idx;
+    }
+    return 0;
+}
+
+void ETH_IRQHandler(void)
+{
+    if (ETH->DMAISR & ETH_DMAISR_DMACIS) {
+        if (ETH->DMACSR & ETH_DMACSR_AIS) {
+            __BKPT(0);
+        }
+        if (ETH->DMACSR & ETH_DMACSR_NIS) {
+            // The packet is transmitted and the corresponding descriptor is
+            // updated with its write-back form
+            if (ETH->DMACSR & ETH_DMACSR_TI) {
+                // while (eth_dma_state_global.tx_start->writeback.OWN == 0)
+                if (eth_dma_state_global.tx_start != eth_txdesc_global_end) {
+                    eth_dma_state_global.tx_start += 1;
+                } else {
+                    eth_dma_state_global.tx_start = eth_txdesc_global_end;
+                }
+                ETH->DMACSR |= ETH_DMACSR_TI;
+            }
+            ETH->DMACSR |= ETH_DMACSR_NIS;
+        }
+    }
+    return;
+}
 
 void setup_eth_dma(void)
 {
+    eth_dma_state_global.tx_start = eth_txdesc_global;
+    eth_dma_state_global.tx_end = eth_txdesc_global;
     memset(eth_txdesc_global, 0, sizeof eth_txdesc_global);
     memset(eth_rxdesc_global, 0, sizeof eth_rxdesc_global);
 
@@ -19,24 +152,38 @@ void setup_eth_dma(void)
         eth_rxdesc_global[i].read.OWN = 1;
     }
 
-    ETH->DMACTDRLR = ETH_TX_RING_LENGTH;
-    ETH->DMACRDRLR = ETH_RX_RING_LENGTH;
+    // Descriptor ring length (actually, the index of the last descriptor in
+    // the ring, i.e. length - 1)
+    ETH->DMACTDRLR = ETH_TX_RING_LENGTH - 1;
+    ETH->DMACRDRLR = ETH_RX_RING_LENGTH - 1;
 
+    // Descriptor list address (base)
     ETH->DMACTDLAR = (uint32_t)eth_txdesc_global;
     ETH->DMACRDLAR = (uint32_t)eth_rxdesc_global;
 
-    ETH->DMACTDTPR = (uint32_t)&eth_txdesc_global[ETH_TX_RING_LENGTH - 1];
+    // Descriptor tail pointer
+    ETH->DMACTDTPR = (uint32_t)eth_txdesc_global;
     ETH->DMACRDTPR = (uint32_t)&eth_rxdesc_global[ETH_RX_RING_LENGTH - 1];
 
-    // Tx DMA transfers in bursts of 32 beats
+    // Tx DMA transfers in bursts of 32 beats (beat = bus width = 4 bytes)
     MODIFY_REG(ETH->DMACTCR, ETH_DMACTCR_TPBL, ETH_DMACTCR_TPBL_32PBL);
-    // Receive buffer size
-    // Round up 1518 (max size of DIX Ethernet II packets) to a multiple of 4
-    MODIFY_REG(ETH->DMACRCR, ETH_DMACRCR_RBSZ, 1520);
+    // Receive buffer size - 1514 (max size of DIX Ethernet II packets minus 4
+    // stripped CRC32 bytes) rounded up to a multiple of 4
+    MODIFY_REG(ETH->DMACRCR, ETH_DMACRCR_RBSZ, 1516);
     // Rx DMA transfers in bursts of 32 beats
     MODIFY_REG(ETH->DMACRCR, ETH_DMACRCR_RPBL, ETH_DMACRCR_RPBL_32PBL);
 
-    // ETH->DMACTCR |= ETH_DMACTCR_ST;
+    // Enable DMA interrupts
+    ETH->DMACIER |= ETH_DMACIER_NIE | ETH_DMACIER_AIE |
+        // Abnormal, ETH_DMACIER_RSE disabled
+        ETH_DMACIER_CDEE | ETH_DMACIER_FBEE | ETH_DMACIER_ETIE |
+        ETH_DMACIER_RWTE | ETH_DMACIER_RBUE |
+        ETH_DMACIER_TXSE |
+        // Normal
+        ETH_DMACIER_TBUE | ETH_DMACIER_TIE;
+
+    NVIC_EnableIRQ(ETH_IRQn);
+    ETH->DMACTCR |= ETH_DMACTCR_ST;
     // ETH->DMACRCR |= ETH_DMACRCR_SR;
 };
 
@@ -126,13 +273,11 @@ void setup_ethernet(void)
     // MAC settings: full duplex, sense carrier before transmitting, strip CRC
     // from all packets
     // TODO: deal with SARC
-    ETH->MACCR |= ETH_MACCR_ECRSFD | ETH_MACCR_DM | ETH_MACCR_ACS | ETH_MACCR_CST;
+    ETH->MACCR |= ETH_MACCR_ECRSFD | ETH_MACCR_FES | ETH_MACCR_DM | ETH_MACCR_ACS | ETH_MACCR_CST;
+    ETH->MACIER |= ETH_MACIER_PHYIE | ETH_MACIER_PMTIE | ETH_MACIER_LPIIE | ETH_MACIER_TSIE | ETH_MACIER_TXSTSIE | ETH_MACIER_RXSTSIE;
 
     setup_eth_dma();
     // Enable MAC Tx and Rx
-    ETH->MACCR |= ETH_MACCR_TE | ETH_MACCR_RE;
+    ETH->MACCR |= ETH_MACCR_TE;  // | ETH_MACCR_RE;
 }
-
-eth_txdesc_t eth_txdesc_global[ETH_TX_RING_LENGTH];
-eth_rxdesc_t eth_rxdesc_global[ETH_RX_RING_LENGTH];
 
