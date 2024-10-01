@@ -135,6 +135,16 @@ SECTIONS
     . = ALIGN(8);
   } >RAM_D1
 
+  /*
+   * This section must belong to D1 or D2 RAM in order to be accessible by ETH
+   * DMA. No need to specify the alignment here as the output section alignment
+   * is set to the largest of its input sections.
+   */
+  .eth_dma_data (NOLOAD) :
+  {
+    *(.eth_dma_data)
+  } >RAM_D2
+
   /* Remove information from the standard libraries */
   /DISCARD/ :
   {

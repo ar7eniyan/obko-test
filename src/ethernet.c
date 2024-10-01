@@ -11,12 +11,14 @@
 
 #include "tools.h"
 
-// DESCRIPTOR TABLE PLACEMENT???
-eth_txdesc_t eth_txdesc_global[ETH_TX_RING_LENGTH] __ALIGNED(4);
+eth_txdesc_t eth_txdesc_global[ETH_TX_RING_LENGTH] ETH_DMA_DATA_ATTRS;
 eth_txdesc_t * const eth_txdesc_global_end = &eth_txdesc_global[ETH_TX_RING_LENGTH];
-eth_rxdesc_t eth_rxdesc_global[ETH_RX_RING_LENGTH] __ALIGNED(4);
-char eth_tx_bufs[ETH_TX_BUF_LENGTH][ETH_TX_RING_LENGTH] __ALIGNED(4);
-char eth_tx_buf_extra[ETH_TX_BUF_LENGTH] __ALIGNED(4);
+
+eth_rxdesc_t eth_rxdesc_global[ETH_RX_RING_LENGTH] ETH_DMA_DATA_ATTRS;
+
+char eth_tx_bufs[ETH_TX_BUF_LENGTH][ETH_TX_RING_LENGTH] ETH_DMA_DATA_ATTRS;
+char eth_tx_buf_extra[ETH_TX_BUF_LENGTH] ETH_DMA_DATA_ATTRS;
+
 eth_dma_state_t eth_dma_state_global;
 
 // DMA Tx descriptor ring processing scheme (RD = read, WB = write-back)

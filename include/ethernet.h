@@ -7,6 +7,8 @@
 
 #include <cmsis_gcc.h>
 
+#define ETH_DMA_DATA_ATTRS __attribute__((aligned (4), section (".eth_dma_data")))
+
 #define ETH_TX_BUF_LENGTH 1516
 #define ETH_TX_RING_LENGTH 4
 #define ETH_RX_RING_LENGTH 4
