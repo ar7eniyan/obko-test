@@ -21,11 +21,12 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/i
 target_link_libraries(${PROJECT_NAME}
     FreeRTOS::STM32::H7::M7::ARM_CM7
     FreeRTOS::STM32::H7::M7::Heap::4
-    CMSIS::STM32::H743VI::M7
+    CMSIS::STM32::H743xx::M7
     STM32::Nano
     STM32::NoSys
 )
 
+stm32_add_linker_script(${PROJECT_NAME} PRIVATE STM32H743VITX_FLASH.ld)
 stm32_print_size_of_target(${PROJECT_NAME})
 stm32_generate_binary_file(${PROJECT_NAME})
 
