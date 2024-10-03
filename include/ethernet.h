@@ -191,14 +191,13 @@ static_assert(sizeof(eth_txdesc_t) == 16, "eth_txdesc size is not 16 bytes");
 static_assert(sizeof(eth_rxdesc_t) == 16, "eth_rxdesc size is not 16 bytes");
 
 void setup_ethernet(void);
+char *eth_next_tx_buf(void);
 int eth_send(char *buf, uint16_t len, char **next_buf);
 
 typedef struct {
     // Index of the descriptor one past the last one owned by DMA.
     // NOTE: When equals to 0, DMA is stopped.
-    eth_txdesc_t *tx_start;
-    eth_txdesc_t *tx_end;
-    int extra_buffer_desc_idx;
+    eth_txdesc_t *tx_tail;
     size_t rx_tail_idx;
 } eth_dma_state_t;
 
