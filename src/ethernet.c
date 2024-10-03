@@ -232,9 +232,10 @@ void setup_ethernet(void)
     // MDIO clock is eth_hclk (AHB1 clock) / 102.
     // The recommended AHB1 clock range for this configuration is 150-250 MHz.
     ETH->MACMDIOAR = (0b0100 << ETH_MACMDIOAR_CR_Pos);
-    // Our MAC address for DA matching
-    ETH->MACA0HR = 0xF0001223;
-    ETH->MACA0LR = 0x456789ab;
+    // Our MAC address for DA matching and insertion: e2:18:e1:2c:f9:79
+    // (randomly generated, locally administered, unicast).
+    ETH->MACA0HR = 0xF00079F9;
+    ETH->MACA0LR = 0x2CE118E2;
     // MAC packet filtering: drop all broadcast and non-matching to our DA
     // unicast packets
     ETH->MACPFR = ETH_MACPFR_DBF;
