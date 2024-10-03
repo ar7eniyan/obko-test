@@ -75,7 +75,8 @@ void vBlinkTask(void *pvParameters)
         0xDE, 0xAD,
         'p', 'i', 'n', 'g'
     };
-    char *next_buf = eth_next_tx_buf();
+    char *next_buf;
+    eth_setup(&next_buf);
 
     SET_RCC_xxxxEN(RCC->AHB4ENR, RCC_AHB4ENR_GPIOEEN);
     // 01 = GPIO output mode
@@ -87,7 +88,7 @@ void vBlinkTask(void *pvParameters)
         // uart_send_string(test_data_uart);
         memset(next_buf, 0x20, 1508);
         memcpy(next_buf, test_header_ethernet, sizeof test_header_ethernet);
-        eth_send(next_buf, 1508, &next_buf);
+        eth_send(1508, &next_buf);
 
         //GPIOE->BSRR = GPIO_BSRR_BS3;
         //vTaskDelay(pdMS_TO_TICKS(1000));
@@ -101,7 +102,6 @@ void vBlinkTask(void *pvParameters)
 int main(void)
 {
     setup_clocks();
-    setup_ethernet();
     setup_hrtim();
     setup_i2c();
     setup_uart();

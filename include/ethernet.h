@@ -190,14 +190,23 @@ typedef union {
 static_assert(sizeof(eth_txdesc_t) == 16, "eth_txdesc size is not 16 bytes");
 static_assert(sizeof(eth_rxdesc_t) == 16, "eth_rxdesc size is not 16 bytes");
 
-void setup_ethernet(void);
-char *eth_next_tx_buf(void);
-int eth_send(char *buf, uint16_t len, char **next_buf);
+// API usage workflow:
+// 1. Initialize the ETH peripheral and get the first buffer to fill by calling
+//    setup_ethernet(&buf), with `buf` being a char pointer.
+// 2. to send a packet:
+//      a. fill `buf` with your data (no more than ETH_TX_BUF_SZ bytes)
+//      b. call eth_send(len, &buf) to enqueue a new frame of `len` bytes long
+//         for transmission and to get the next buffer in `buf`
+void eth_setup(char **first_buf);
+int eth_send(uint16_t len, char **next_buf);
 
 typedef struct {
     // Points to the descriptor one past the last one owned by DMA
     // (wrapped around to zero if goes out of the bounds)
     eth_txdesc_t *tx_tail;
+    // Stores the most recently allocated buffer from eth_tx_bufs or
+    // eth_tx_buf_extra to be sent to the DMA in the next eth_send() call.
+    char *tx_curr_buf;
     size_t rx_tail_idx;
 } eth_dma_state_t;
 

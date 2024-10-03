@@ -66,7 +66,7 @@ char *eth_next_tx_buf(void)
 
 // Minimal to no safety checks
 // TODO: write a list of conditions when it's safe to call this
-int eth_send(char *buf, uint16_t len, char **next_buf)
+int eth_send(uint16_t len, char **next_buf)
 {
     eth_txdesc_t *new_desc, *new_tail;
 
@@ -83,7 +83,7 @@ int eth_send(char *buf, uint16_t len, char **next_buf)
     eth_dma_state_global.tx_tail = new_tail;
 
     *new_desc = (eth_txdesc_t) { .raw = {0, 0, 0, 0} };
-    new_desc->read.BUF1AP = (uint32_t)buf;
+    new_desc->read.BUF1AP = (uint32_t)eth_dma_state_global.tx_curr_buf;
     new_desc->read.IOC = 1;
     new_desc->read.HL_B1L = len;
     new_desc->read.OWN = 1;
@@ -96,7 +96,7 @@ int eth_send(char *buf, uint16_t len, char **next_buf)
     ETH->DMACTDTPR = (uint32_t)new_tail;
 
     // Get a buffer for the next eth_send() call
-    *next_buf = eth_next_tx_buf();
+    eth_dma_state_global.tx_curr_buf = *next_buf = eth_next_tx_buf();
     return 0;
 }
 
@@ -110,11 +110,12 @@ void ETH_IRQHandler(void)
     return;
 }
 
-void setup_eth_dma(void)
+void setup_eth_dma(char **first_buf)
 {
-    eth_dma_state_global.tx_tail = eth_tx_ring;
     memset(eth_tx_ring, 0, sizeof eth_tx_ring);
     memset(eth_rx_ring, 0, sizeof eth_rx_ring);
+    eth_dma_state_global.tx_tail = eth_tx_ring;
+    eth_dma_state_global.tx_curr_buf = *first_buf = eth_next_tx_buf();
 
     for (size_t i = 0; i < ETH_RX_RING_SZ; i++) {
         eth_rx_ring[i].read.OWN = 1;
@@ -199,7 +200,7 @@ void setup_eth_gpio(void)
         (0b1011 << GPIO_AFRL_AFSEL5_Pos));
 }
 
-void setup_ethernet(void)
+void eth_setup(char **first_buf)
 {
     setup_eth_gpio();
 
@@ -243,7 +244,8 @@ void setup_ethernet(void)
     ETH->MACCR |= ETH_MACCR_ECRSFD | ETH_MACCR_FES | ETH_MACCR_DM | ETH_MACCR_ACS | ETH_MACCR_CST;
     ETH->MACIER |= ETH_MACIER_PHYIE | ETH_MACIER_PMTIE | ETH_MACIER_LPIIE | ETH_MACIER_TSIE | ETH_MACIER_TXSTSIE | ETH_MACIER_RXSTSIE;
 
-    setup_eth_dma();
+    setup_eth_dma(first_buf);
+
     // Enable MAC Tx and Rx
     ETH->MACCR |= ETH_MACCR_TE;  // | ETH_MACCR_RE;
 }
