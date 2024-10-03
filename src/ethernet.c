@@ -16,7 +16,7 @@ eth_txdesc_t * const eth_txdesc_global_end = &eth_txdesc_global[ETH_TX_RING_LENG
 
 ETH_DMA_DATA eth_rxdesc_t eth_rxdesc_global[ETH_RX_RING_LENGTH];
 
-ETH_DMA_DATA char eth_tx_bufs[ETH_TX_BUF_LENGTH][ETH_TX_RING_LENGTH];
+ETH_DMA_DATA char eth_tx_bufs[ETH_TX_RING_LENGTH][ETH_TX_BUF_LENGTH];
 ETH_DMA_DATA char eth_tx_buf_extra[ETH_TX_BUF_LENGTH];
 
 eth_dma_state_t eth_dma_state_global;

@@ -9,7 +9,8 @@
 
 #define ETH_DMA_DATA __attribute__((aligned (4), section (".eth_dma_data")))
 
-#define ETH_TX_BUF_LENGTH 1516
+// 6 bytes of DA, 2 bytes of EtherType, and 1500 bytes of payload maximum
+#define ETH_TX_BUF_LENGTH 1508
 #define ETH_TX_RING_LENGTH 4
 #define ETH_RX_RING_LENGTH 4
 
