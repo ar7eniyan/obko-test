@@ -89,8 +89,6 @@ int eth_send(uint16_t len, char **next_buf)
     new_desc->read.OWN = 1;
     new_desc->read.FD = 1;
     new_desc->read.LD = 1;
-    // Inlcude or insert source address (use MAC address register 0)
-    new_desc->read.SAIC = 0b001;
 
     __DSB();
     ETH->DMACTDTPR = (uint32_t)new_tail;
@@ -239,9 +237,9 @@ void eth_setup(char **first_buf)
     // unicast packets
     ETH->MACPFR = ETH_MACPFR_DBF;
     // MAC settings: full duplex, sense carrier before transmitting, strip CRC
-    // from all packets
-    // TODO: deal with SARC
-    ETH->MACCR |= ETH_MACCR_ECRSFD | ETH_MACCR_FES | ETH_MACCR_DM | ETH_MACCR_ACS | ETH_MACCR_CST;
+    // from all packets, insert MAC address 0 as a SA in all packets
+    ETH->MACCR |= ETH_MACCR_ECRSFD | ETH_MACCR_FES | ETH_MACCR_DM |
+        ETH_MACCR_ACS | ETH_MACCR_CST | ETH_MACCR_SARC_INSADDR0;
     ETH->MACIER |= ETH_MACIER_PHYIE | ETH_MACIER_PMTIE | ETH_MACIER_LPIIE | ETH_MACIER_TSIE | ETH_MACIER_TXSTSIE | ETH_MACIER_RXSTSIE;
 
     setup_eth_dma(first_buf);
