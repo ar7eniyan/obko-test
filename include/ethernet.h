@@ -10,9 +10,9 @@
 #define ETH_DMA_DATA __attribute__((aligned (4), section (".eth_dma_data")))
 
 // 6 bytes of DA, 2 bytes of EtherType, and 1500 bytes of payload maximum
-#define ETH_TX_BUF_LENGTH 1508
-#define ETH_TX_RING_LENGTH 4
-#define ETH_RX_RING_LENGTH 4
+#define ETH_TX_BUF_SZ 1508
+#define ETH_TX_RING_SZ 4
+#define ETH_RX_RING_SZ 4
 
 typedef union {
     struct {
@@ -195,13 +195,11 @@ char *eth_next_tx_buf(void);
 int eth_send(char *buf, uint16_t len, char **next_buf);
 
 typedef struct {
-    // Index of the descriptor one past the last one owned by DMA.
-    // NOTE: When equals to 0, DMA is stopped.
+    // Points to the descriptor one past the last one owned by DMA
+    // (wrapped around to zero if goes out of the bounds)
     eth_txdesc_t *tx_tail;
     size_t rx_tail_idx;
 } eth_dma_state_t;
 
-extern eth_txdesc_t eth_txdesc_global[ETH_TX_RING_LENGTH] __ALIGNED(4);
-extern eth_rxdesc_t eth_rxdesc_global[ETH_RX_RING_LENGTH] __ALIGNED(4);
-
 #endif  // #ifndef INCLUDE_ETHERNET_H
+

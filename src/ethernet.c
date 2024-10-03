@@ -11,13 +11,11 @@
 
 #include "tools.h"
 
-ETH_DMA_DATA eth_txdesc_t eth_txdesc_global[ETH_TX_RING_LENGTH];
-eth_txdesc_t * const eth_txdesc_global_end = &eth_txdesc_global[ETH_TX_RING_LENGTH - 1];
+ETH_DMA_DATA eth_txdesc_t eth_tx_ring[ETH_TX_RING_SZ];
+ETH_DMA_DATA eth_rxdesc_t eth_rx_ring[ETH_RX_RING_SZ];
 
-ETH_DMA_DATA eth_rxdesc_t eth_rxdesc_global[ETH_RX_RING_LENGTH];
-
-ETH_DMA_DATA char eth_tx_bufs[ETH_TX_RING_LENGTH][ETH_TX_BUF_LENGTH];
-ETH_DMA_DATA char eth_tx_buf_extra[ETH_TX_BUF_LENGTH];
+ETH_DMA_DATA char eth_tx_bufs[ETH_TX_RING_SZ][ETH_TX_BUF_SZ];
+ETH_DMA_DATA char eth_tx_buf_extra[ETH_TX_BUF_SZ];
 
 eth_dma_state_t eth_dma_state_global;
 
@@ -62,7 +60,7 @@ eth_dma_state_t eth_dma_state_global;
 char *eth_next_tx_buf(void)
 {
     return eth_dma_state_global.tx_tail->writeback.OWN == 0
-        ? eth_tx_bufs[eth_dma_state_global.tx_tail - eth_txdesc_global]
+        ? eth_tx_bufs[eth_dma_state_global.tx_tail - eth_tx_ring]
         : eth_tx_buf_extra;
 }
 
@@ -70,19 +68,19 @@ char *eth_next_tx_buf(void)
 // TODO: write a list of conditions when it's safe to call this
 int eth_send(char *buf, uint16_t len, char **next_buf)
 {
-    eth_txdesc_t *new_desc, *new_end;
+    eth_txdesc_t *new_desc, *new_tail;
 
-    if (len > ETH_TX_BUF_LENGTH) {
+    if (len > ETH_TX_BUF_SZ) {
         return -1;
     }
 
     new_desc = eth_dma_state_global.tx_tail;
     while (new_desc->writeback.OWN == 1);
 
-    new_end = eth_dma_state_global.tx_tail < eth_txdesc_global_end
+    new_tail = eth_dma_state_global.tx_tail < &eth_tx_ring[ETH_TX_RING_SZ - 1]
         ? eth_dma_state_global.tx_tail + 1
-        : eth_txdesc_global;
-    eth_dma_state_global.tx_tail = new_end;
+        : eth_tx_ring;
+    eth_dma_state_global.tx_tail = new_tail;
 
     *new_desc = (eth_txdesc_t) { .raw = {0, 0, 0, 0} };
     new_desc->read.BUF1AP = (uint32_t)buf;
@@ -95,7 +93,7 @@ int eth_send(char *buf, uint16_t len, char **next_buf)
     new_desc->read.SAIC = 0b001;
 
     __DSB();
-    ETH->DMACTDTPR = (uint32_t)new_end;
+    ETH->DMACTDTPR = (uint32_t)new_tail;
 
     // Get a buffer for the next eth_send() call
     *next_buf = eth_next_tx_buf();
@@ -114,26 +112,26 @@ void ETH_IRQHandler(void)
 
 void setup_eth_dma(void)
 {
-    eth_dma_state_global.tx_tail = eth_txdesc_global;
-    memset(eth_txdesc_global, 0, sizeof eth_txdesc_global);
-    memset(eth_rxdesc_global, 0, sizeof eth_rxdesc_global);
+    eth_dma_state_global.tx_tail = eth_tx_ring;
+    memset(eth_tx_ring, 0, sizeof eth_tx_ring);
+    memset(eth_rx_ring, 0, sizeof eth_rx_ring);
 
-    for (size_t i = 0; i < ETH_RX_RING_LENGTH; i++) {
-        eth_rxdesc_global[i].read.OWN = 1;
+    for (size_t i = 0; i < ETH_RX_RING_SZ; i++) {
+        eth_rx_ring[i].read.OWN = 1;
     }
 
     // Descriptor ring length (actually, the index of the last descriptor in
     // the ring, i.e. length - 1)
-    ETH->DMACTDRLR = ETH_TX_RING_LENGTH - 1;
-    ETH->DMACRDRLR = ETH_RX_RING_LENGTH - 1;
+    ETH->DMACTDRLR = ETH_TX_RING_SZ - 1;
+    ETH->DMACRDRLR = ETH_RX_RING_SZ - 1;
 
     // Descriptor list address (base)
-    ETH->DMACTDLAR = (uint32_t)eth_txdesc_global;
-    ETH->DMACRDLAR = (uint32_t)eth_rxdesc_global;
+    ETH->DMACTDLAR = (uint32_t)eth_tx_ring;
+    ETH->DMACRDLAR = (uint32_t)eth_rx_ring;
 
     // Descriptor tail pointer
-    ETH->DMACTDTPR = (uint32_t)eth_txdesc_global;
-    ETH->DMACRDTPR = (uint32_t)&eth_rxdesc_global[ETH_RX_RING_LENGTH - 1];
+    ETH->DMACTDTPR = (uint32_t)eth_tx_ring;
+    ETH->DMACRDTPR = (uint32_t)&eth_rx_ring[ETH_RX_RING_SZ - 1];
 
     // Tx DMA transfers in bursts of 32 beats (beat = bus width = 4 bytes)
     MODIFY_REG(ETH->DMACTCR, ETH_DMACTCR_TPBL, ETH_DMACTCR_TPBL_32PBL);
