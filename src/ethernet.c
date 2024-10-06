@@ -188,12 +188,12 @@ void setup_eth_dma(char **first_buf)
     // Rx DMA transfers in bursts of 32 beats
     MODIFY_REG(ETH->DMACRCR, ETH_DMACRCR_RPBL, ETH_DMACRCR_RPBL_32PBL);
 
-    // Enable DMA interrupts
-    ETH->DMACIER |= ETH_DMACIER_NIE | ETH_DMACIER_AIE |
-        // Abnormal, RSE and ETIE (why is it abnormal???) disabled
-        ETH_DMACIER_CDEE | ETH_DMACIER_FBEE | ETH_DMACIER_RWTE |
-        ETH_DMACIER_RBUE | ETH_DMACIER_TXSE;
-        // Normal disabled
+    // Enable some abnormal DMA interrupts (to crash the code explicitly in
+    // case of incorrect behaviour)
+    ETH->DMACIER = ETH_DMACIER_AIE |
+        // Abnormal: Context descriptor error and Fatal bus error
+        // What does Transmit stopped mean? (hasn't been seen firing yet)
+        ETH_DMACIER_CDEE | ETH_DMACIER_FBEE | ETH_DMACIER_TXSE;
 
     NVIC_EnableIRQ(ETH_IRQn);
     ETH->DMACTCR |= ETH_DMACTCR_ST;
