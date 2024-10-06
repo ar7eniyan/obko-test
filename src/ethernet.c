@@ -151,12 +151,12 @@ void ETH_IRQHandler(void)
     return;
 }
 
-void setup_eth_dma(char **first_buf)
+void setup_eth_dma(char **first_tx_buf)
 {
     memset(eth_tx_ring, 0, sizeof eth_tx_ring);
     memset(eth_rx_ring, 0, sizeof eth_rx_ring);
     eth_dma_state_global.tx_tail = eth_tx_ring;
-    eth_dma_state_global.tx_curr_buf = *first_buf = eth_next_tx_buf();
+    eth_dma_state_global.tx_curr_buf = *first_tx_buf = eth_next_tx_buf();
     eth_dma_state_global.rx_head = eth_rx_ring;
     eth_dma_state_global.rx_last_out_buf = eth_rx_buf_extra;
 
@@ -246,7 +246,7 @@ void setup_eth_gpio(void)
         (0b1011 << GPIO_AFRL_AFSEL5_Pos));
 }
 
-void eth_setup(char **first_buf)
+void eth_setup(char **first_tx_buf)
 {
     setup_eth_gpio();
 
@@ -290,7 +290,7 @@ void eth_setup(char **first_buf)
         ETH_MACCR_ACS | ETH_MACCR_CST | ETH_MACCR_SARC_INSADDR0;
     ETH->MACIER |= ETH_MACIER_PHYIE | ETH_MACIER_PMTIE | ETH_MACIER_LPIIE | ETH_MACIER_TSIE | ETH_MACIER_TXSTSIE | ETH_MACIER_RXSTSIE;
 
-    setup_eth_dma(first_buf);
+    setup_eth_dma(first_tx_buf);
 
     // Enable MAC Tx and Rx
     ETH->MACCR |= ETH_MACCR_TE | ETH_MACCR_RE;

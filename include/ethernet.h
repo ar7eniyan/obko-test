@@ -200,7 +200,7 @@ static_assert(sizeof(eth_rxdesc_t) == 16, "eth_rxdesc size is not 16 bytes");
 //      a. fill `buf` with your data (no more than ETH_TX_BUF_SZ bytes)
 //      b. call eth_send(len, &buf) to enqueue a new frame of `len` bytes long
 //         for transmission and to get the next buffer in `buf`
-void eth_setup(char **first_buf);
+void eth_setup(char **first_tx_buf);
 int eth_send(uint16_t len, char **next_buf);
 int eth_recv(char **out_buf);
 
