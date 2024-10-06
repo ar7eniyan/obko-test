@@ -12,6 +12,9 @@
 // 6 bytes of DA, 2 bytes of EtherType, and 1500 bytes of payload maximum
 #define ETH_TX_BUF_SZ 1508
 #define ETH_TX_RING_SZ 4
+// 2048 bytes of watchdog limit - 2 stripped bytes of FCS = 2046 bytes max.
+// Rounded up to a multiple of 4: 2048 bytes.
+#define ETH_RX_BUF_SZ 2048
 #define ETH_RX_RING_SZ 4
 
 typedef union {
@@ -199,6 +202,7 @@ static_assert(sizeof(eth_rxdesc_t) == 16, "eth_rxdesc size is not 16 bytes");
 //         for transmission and to get the next buffer in `buf`
 void eth_setup(char **first_buf);
 int eth_send(uint16_t len, char **next_buf);
+int eth_recv(char **out_buf);
 
 typedef struct {
     // Points to the descriptor one past the last one owned by DMA
@@ -207,7 +211,8 @@ typedef struct {
     // Stores the most recently allocated buffer from eth_tx_bufs or
     // eth_tx_buf_extra to be sent to the DMA in the next eth_send() call.
     char *tx_curr_buf;
-    size_t rx_tail_idx;
+    eth_rxdesc_t *rx_head;
+    char *rx_last_out_buf;
 } eth_dma_state_t;
 
 #endif  // #ifndef INCLUDE_ETHERNET_H
