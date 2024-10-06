@@ -68,34 +68,34 @@ void setup_clocks(void)
 
 void vBlinkTask(void *pvParameters)
 {
-    char test_data_i2c[6] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66};
-    char *test_data_uart = "Hello\n";
-    char test_header_ethernet[] = {
-        0xA8, 0xA1, 0x59, 0x72, 0x37, 0x0E,
-        0xDE, 0xAD,
-        'p', 'i', 'n', 'g'
-    };
-    char *next_buf;
-    eth_setup(&next_buf);
-
     SET_RCC_xxxxEN(RCC->AHB4ENR, RCC_AHB4ENR_GPIOEEN);
     // 01 = GPIO output mode
     GPIOE->MODER &= ~GPIO_MODER_MODE3_1;
     GPIOE->MODER |= GPIO_MODER_MODE3_0;
-    
+
     for (;;) {
-        // i2c_master_transmit(0x11, test_data_i2c, sizeof(test_data_i2c), true);
-        // uart_send_string(test_data_uart);
-        memset(next_buf, 0x20, 1508);
-        memcpy(next_buf, test_header_ethernet, sizeof test_header_ethernet);
-        eth_send(1508, &next_buf);
-
-        //GPIOE->BSRR = GPIO_BSRR_BS3;
-        //vTaskDelay(pdMS_TO_TICKS(1000));
-        //GPIOE->BSRR = GPIO_BSRR_BR3;
-        //vTaskDelay(pdMS_TO_TICKS(1000));
+        GPIOE->BSRR = GPIO_BSRR_BS3;
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        GPIOE->BSRR = GPIO_BSRR_BR3;
+        vTaskDelay(pdMS_TO_TICKS(1000));
     }
+    vTaskDelete(NULL);
+}
 
+void vEthEchoTask(void *pvParameters)
+{
+    char *tx_buf, *rx_buf;
+    int rx_len;
+    eth_setup(&tx_buf);
+
+    for (;;) {
+        if ((rx_len = eth_recv(&rx_buf)) != -1){
+            // Copy starting with the SA (will be the DA of the outgoing
+            // packet). Our address will be automatically inserted as the SA.
+            memcpy(tx_buf, rx_buf + 6, rx_len - 6);
+            eth_send(rx_len - 6, &tx_buf);
+        }
+    }
     vTaskDelete(NULL);
 }
 
@@ -110,6 +110,7 @@ int main(void)
     HRTIM1_TIMC->PERxR = 1200;
 
     xTaskCreate(vBlinkTask, "blink", 128, NULL, tskIDLE_PRIORITY + 5, NULL);
+    xTaskCreate(vEthEchoTask, "echo", 128, NULL, tskIDLE_PRIORITY + 10, NULL);
 
     vTaskStartScheduler();
     // The function above returns only if something calls vTaskEndScheduler().
