@@ -99,6 +99,17 @@ void vEthEchoTask(void *pvParameters)
     vTaskDelete(NULL);
 }
 
+void vI2CTask(void *pvParameters)
+{
+    char test_i2c_data[] = "Hello\n";
+
+    for (;;) {
+        i2c_master_transmit(0x77, test_i2c_data);
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+    vTaskDelete(NULL);
+}
+
 int main(void)
 {
     setup_clocks();
@@ -111,6 +122,7 @@ int main(void)
 
     xTaskCreate(vBlinkTask, "blink", 128, NULL, tskIDLE_PRIORITY + 5, NULL);
     xTaskCreate(vEthEchoTask, "echo", 128, NULL, tskIDLE_PRIORITY + 10, NULL);
+    xTaskCreate(vI2CTask, "i2c_hello", 128, NULL, tskIDLE_PRIORITY + 15, NULL);
 
     vTaskStartScheduler();
     // The function above returns only if something calls vTaskEndScheduler().
