@@ -16,6 +16,9 @@ ETH_DMA_DATA eth_rxdesc_t eth_rx_ring[ETH_RX_RING_SZ];
 
 ETH_DMA_DATA char eth_tx_bufs[ETH_TX_RING_SZ][ETH_TX_BUF_SZ];
 ETH_DMA_DATA char eth_tx_buf_extra[ETH_TX_BUF_SZ];
+ETH_DMA_DATA char eth_rx_bufs[ETH_RX_RING_SZ][ETH_RX_BUF_SZ];
+ETH_DMA_DATA char eth_rx_buf_extra[ETH_RX_BUF_SZ];
+char *eth_rx_buf_table[ETH_RX_RING_SZ];
 
 eth_dma_state_t eth_dma_state_global;
 
@@ -98,6 +101,46 @@ int eth_send(uint16_t len, char **next_buf)
     return 0;
 }
 
+// sz (for dma) + 1 (for user) max buffers in use:
+// - free from user's last call (if it was)
+// - alloc a new one for dma
+// - transfer from dma (last one used in this pos) to user
+// before first call sz buffers are used by dma, one is free for user
+// algo:
+//   - last_out_buf = extra
+//   eth_read:
+//   - give to user from the dma_buf_table[i], set it to last_out_buf at the end
+//   - free the one in last_out_buf
+//   - set it for dma and in the dma_buf_table[i]
+//
+int eth_recv(char **out_buf) {
+    eth_rxdesc_t *head = eth_dma_state_global.rx_head;
+    while (head->writeback.OWN == 1);
+
+    // Error summary is not zero
+    if (head->writeback.ES == 1) {
+        return -1;
+    }
+    int len = head->writeback.PL;
+
+    char **buf_table_entry = &eth_rx_buf_table[head - eth_rx_ring];
+    char *filled = *buf_table_entry;
+    *buf_table_entry = eth_dma_state_global.rx_last_out_buf;
+
+    head->read.BUF1AP = (uint32_t)eth_dma_state_global.rx_last_out_buf;
+    head->read.BUF1V = 1;
+    head->read.OWN = 1;
+
+    eth_dma_state_global.rx_head = head < &eth_rx_ring[ETH_RX_RING_SZ - 1]
+        ? head + 1
+        : eth_rx_ring;
+    *out_buf = eth_dma_state_global.rx_last_out_buf = filled;
+
+    __DSB();
+    ETH->DMACRDTPR = (uint32_t)&eth_rx_ring[ETH_RX_RING_SZ];
+    return len;
+}
+
 void ETH_IRQHandler(void)
 {
     if (ETH->DMAISR & ETH_DMAISR_DMACIS) {
@@ -108,15 +151,20 @@ void ETH_IRQHandler(void)
     return;
 }
 
-void setup_eth_dma(char **first_buf)
+void setup_eth_dma(char **first_tx_buf)
 {
     memset(eth_tx_ring, 0, sizeof eth_tx_ring);
     memset(eth_rx_ring, 0, sizeof eth_rx_ring);
     eth_dma_state_global.tx_tail = eth_tx_ring;
-    eth_dma_state_global.tx_curr_buf = *first_buf = eth_next_tx_buf();
+    eth_dma_state_global.tx_curr_buf = *first_tx_buf = eth_next_tx_buf();
+    eth_dma_state_global.rx_head = eth_rx_ring;
+    eth_dma_state_global.rx_last_out_buf = eth_rx_buf_extra;
 
     for (size_t i = 0; i < ETH_RX_RING_SZ; i++) {
+        eth_rx_ring[i].read.BUF1AP = (uint32_t)eth_rx_bufs[i];
+        eth_rx_ring[i].read.BUF1V = 1;
         eth_rx_ring[i].read.OWN = 1;
+        eth_rx_buf_table[i] = eth_rx_bufs[i];
     }
 
     // Descriptor ring length (actually, the index of the last descriptor in
@@ -130,7 +178,7 @@ void setup_eth_dma(char **first_buf)
 
     // Descriptor tail pointer
     ETH->DMACTDTPR = (uint32_t)eth_tx_ring;
-    ETH->DMACRDTPR = (uint32_t)&eth_rx_ring[ETH_RX_RING_SZ - 1];
+    ETH->DMACRDTPR = (uint32_t)&eth_rx_ring[ETH_RX_RING_SZ];
 
     // Tx DMA transfers in bursts of 32 beats (beat = bus width = 4 bytes)
     MODIFY_REG(ETH->DMACTCR, ETH_DMACTCR_TPBL, ETH_DMACTCR_TPBL_32PBL);
@@ -140,16 +188,16 @@ void setup_eth_dma(char **first_buf)
     // Rx DMA transfers in bursts of 32 beats
     MODIFY_REG(ETH->DMACRCR, ETH_DMACRCR_RPBL, ETH_DMACRCR_RPBL_32PBL);
 
-    // Enable DMA interrupts
-    ETH->DMACIER |= ETH_DMACIER_NIE | ETH_DMACIER_AIE |
-        // Abnormal, RSE and ETIE (why is it abnormal???) disabled
-        ETH_DMACIER_CDEE | ETH_DMACIER_FBEE | ETH_DMACIER_RWTE |
-        ETH_DMACIER_RBUE | ETH_DMACIER_TXSE;
-        // Normal disabled
+    // Enable some abnormal DMA interrupts (to crash the code explicitly in
+    // case of incorrect behaviour)
+    ETH->DMACIER = ETH_DMACIER_AIE |
+        // Abnormal: Context descriptor error and Fatal bus error
+        // What does Transmit stopped mean? (hasn't been seen firing yet)
+        ETH_DMACIER_CDEE | ETH_DMACIER_FBEE | ETH_DMACIER_TXSE;
 
     NVIC_EnableIRQ(ETH_IRQn);
     ETH->DMACTCR |= ETH_DMACTCR_ST;
-    // ETH->DMACRCR |= ETH_DMACRCR_SR;
+    ETH->DMACRCR |= ETH_DMACRCR_SR;
 };
 
 void setup_eth_gpio(void)
@@ -198,7 +246,7 @@ void setup_eth_gpio(void)
         (0b1011 << GPIO_AFRL_AFSEL5_Pos));
 }
 
-void eth_setup(char **first_buf)
+void eth_setup(char **first_tx_buf)
 {
     setup_eth_gpio();
 
@@ -242,9 +290,9 @@ void eth_setup(char **first_buf)
         ETH_MACCR_ACS | ETH_MACCR_CST | ETH_MACCR_SARC_INSADDR0;
     ETH->MACIER |= ETH_MACIER_PHYIE | ETH_MACIER_PMTIE | ETH_MACIER_LPIIE | ETH_MACIER_TSIE | ETH_MACIER_TXSTSIE | ETH_MACIER_RXSTSIE;
 
-    setup_eth_dma(first_buf);
+    setup_eth_dma(first_tx_buf);
 
     // Enable MAC Tx and Rx
-    ETH->MACCR |= ETH_MACCR_TE;  // | ETH_MACCR_RE;
+    ETH->MACCR |= ETH_MACCR_TE | ETH_MACCR_RE;
 }
 
