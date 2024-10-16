@@ -1,19 +1,6 @@
-#include <stdint.h>
-#include <string.h>
+#include "main.h"
 
-#include "FreeRTOS.h"
-#include "task.h"
-#include "stm32h743xx.h"
-#include "system_stm32h7xx.h"
-
-#include "tools.h"
-#include "motors.h"
-#include "ethernet.h"
-#include "i2c.h"
-#include "uart.h"
-
-void setup_clocks(void)
-{
+void setup_clocks(void) {
     // Update flash latency to correspond with VOS0 and 480MHz
     FLASH->ACR = (0b10 << FLASH_ACR_WRHIGHFREQ_Pos) | (FLASH_ACR_LATENCY_4WS);
     __IO uint32_t tmpreg = FLASH->ACR;
@@ -66,8 +53,7 @@ void setup_clocks(void)
     SystemCoreClockUpdate();
 }
 
-void vBlinkTask(void *pvParameters)
-{
+void vBlinkTask(void *pvParameters) {
     SET_RCC_xxxxEN(RCC->AHB4ENR, RCC_AHB4ENR_GPIOEEN);
     // 01 = GPIO output mode
     GPIOE->MODER &= ~GPIO_MODER_MODE3_1;
@@ -75,15 +61,14 @@ void vBlinkTask(void *pvParameters)
 
     for (;;) {
         GPIOE->BSRR = GPIO_BSRR_BS3;
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        vTaskDelay(pdMS_TO_TICKS(200));
         GPIOE->BSRR = GPIO_BSRR_BR3;
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        vTaskDelay(pdMS_TO_TICKS(800));
     }
     vTaskDelete(NULL);
 }
 
-void vEthEchoTask(void *pvParameters)
-{
+void vEthEchoTask(void *pvParameters) {
     char *tx_buf, *rx_buf;
     int rx_len;
     eth_setup(&tx_buf);
@@ -99,19 +84,19 @@ void vEthEchoTask(void *pvParameters)
     vTaskDelete(NULL);
 }
 
-void vI2CTask(void *pvParameters)
-{
+void vI2CTask(void *pvParameters) {
     char test_i2c_data[] = "Hello\n";
 
     for (;;) {
-        i2c_master_transmit(0x77, test_i2c_data);
+        i2c_master_transmit(I2C1, I2C_ENC_ADDR, test_i2c_data, sizeof(test_i2c_data));
+        i2c_master_transmit(I2C3, I2C_ENC_ADDR, test_i2c_data, sizeof(test_i2c_data));
+        i2c_master_transmit(I2C4, I2C_ENC_ADDR, test_i2c_data, sizeof(test_i2c_data));
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
     vTaskDelete(NULL);
 }
 
-int main(void)
-{
+int main(void) {
     setup_clocks();
     setup_hrtim();
     setup_i2c();

@@ -8,6 +8,7 @@
 #include "stm32h743xx.h"
 
 #include "tools.h"
+#include "config.h"
 
 // #define I2C_RISE_TIME   300
 // #define I2C_FALL_TIME   300
@@ -17,6 +18,8 @@
 
 
 void setup_i2c(void);
-void i2c_master_transmit(uint8_t addr, const char * data);
+void i2c_master_transmit(I2C_TypeDef *i2c_no, uint8_t addr, const char * data, uint8_t len);
+
+void i2c_encoder_setup(void);           // Absolute Encoder AS5600 Initialization.
 
 #endif  // #ifndef INCLUDE_I2C_H
