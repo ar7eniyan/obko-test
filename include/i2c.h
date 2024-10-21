@@ -18,7 +18,7 @@
 
 
 void setup_i2c(void);
-void i2c_master_transmit(I2C_TypeDef *i2c_no, uint8_t addr, const char * data, uint8_t len);
+void i2c_master_transmit(uint8_t addr, const char * data, uint8_t len);
 
 void i2c_encoder_setup(void);           // Absolute Encoder AS5600 Initialization.
 

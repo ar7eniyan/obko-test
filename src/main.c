@@ -42,6 +42,9 @@ void setup_clocks(void) {
     // D3PPRE prescaler to 2
     RCC->D3CFGR = (0b100 << RCC_D3CFGR_D3PPRE_Pos);
 
+//    RCC->D2CCIP2R &= ~(0b11 << RCC_D2CCIP2R_I2C123SEL);
+//    RCC->D3CCIPR &= ~(0b11 << RCC_D3CCIPR_I2C4SEL);
+
     // TODO: Need to wait for 16 cycles of the slowest of all APB clocks
     for (int delay = 100; delay--; );
 
@@ -51,19 +54,16 @@ void setup_clocks(void) {
     // TODO: Clarify on the delay needed
     for (int delay = 100; delay--; );
     SystemCoreClockUpdate();
+
+    
 }
 
 void vBlinkTask(void *pvParameters) {
-    SET_RCC_xxxxEN(RCC->AHB4ENR, RCC_AHB4ENR_GPIOEEN);
-    // 01 = GPIO output mode
-    GPIOE->MODER &= ~GPIO_MODER_MODE3_1;
-    GPIOE->MODER |= GPIO_MODER_MODE3_0;
-
     for (;;) {
         GPIOE->BSRR = GPIO_BSRR_BS3;
-        vTaskDelay(pdMS_TO_TICKS(200));
+        vTaskDelay(pdMS_TO_TICKS((int)pvParameters));
         GPIOE->BSRR = GPIO_BSRR_BR3;
-        vTaskDelay(pdMS_TO_TICKS(800));
+        vTaskDelay(pdMS_TO_TICKS(1000 - (int)pvParameters));
     }
     vTaskDelete(NULL);
 }
@@ -85,34 +85,51 @@ void vEthEchoTask(void *pvParameters) {
 }
 
 void vI2CTask(void *pvParameters) {
-    char test_i2c_data[] = "Hello\n";
+    char test_i2c_data[] = "Hello";
 
     for (;;) {
-        i2c_master_transmit(I2C1, I2C_ENC_ADDR, test_i2c_data, sizeof(test_i2c_data));
-        i2c_master_transmit(I2C3, I2C_ENC_ADDR, test_i2c_data, sizeof(test_i2c_data));
-        i2c_master_transmit(I2C4, I2C_ENC_ADDR, test_i2c_data, sizeof(test_i2c_data));
+        i2c_master_transmit(I2C_ENC_ADDR, test_i2c_data, sizeof(test_i2c_data));
+        //i2c_master_transmit(I2C3, I2C_ENC_ADDR, test_i2c_data, sizeof(test_i2c_data));
+        //i2c_master_transmit(I2C4, I2C_ENC_ADDR, test_i2c_data, sizeof(test_i2c_data));
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
     vTaskDelete(NULL);
 }
 
 int main(void) {
+    SET_RCC_xxxxEN(RCC->AHB4ENR, RCC_AHB4ENR_GPIOEEN);
+    // 01 = GPIO output mode
+    GPIOE->MODER &= ~GPIO_MODER_MODE3_1;
+    GPIOE->MODER |= GPIO_MODER_MODE3_0;
+
     setup_clocks();
     setup_hrtim();
     setup_i2c();
     setup_uart();
+    
     HRTIM1_TIMA->PERxR = 1200;
     HRTIM1_TIMB->PERxR = 1200;
     HRTIM1_TIMC->PERxR = 1200;
+  
+    //SET_RCC_xxxxEN(RCC->AHB4ENR, RCC_AHB4ENR_GPIOEEN);
+    //// 01 = GPIO output mode
+    //GPIOE->MODER &= ~GPIO_MODER_MODE3_1;
+    //GPIOE->MODER |= GPIO_MODER_MODE3_0;
 
-    xTaskCreate(vBlinkTask, "blink", 128, NULL, tskIDLE_PRIORITY + 5, NULL);
-    xTaskCreate(vEthEchoTask, "echo", 128, NULL, tskIDLE_PRIORITY + 10, NULL);
-    xTaskCreate(vI2CTask, "i2c_hello", 128, NULL, tskIDLE_PRIORITY + 15, NULL);
+    xTaskCreate(vBlinkTask, "blink", 128, 100, tskIDLE_PRIORITY + 5, NULL);
+    //xTaskCreate(vEthEchoTask, "echo", 128, NULL, tskIDLE_PRIORITY + 6, NULL);
+    xTaskCreate(vI2CTask, "i2c_talker", 128, NULL, tskIDLE_PRIORITY + 7, NULL);
 
     vTaskStartScheduler();
+
     // The function above returns only if something calls vTaskEndScheduler().
     // The choice here is to treat as a bug and hang the CPU.
-    for(;;);
+    for(;;) {
+        GPIOE->BSRR = GPIO_BSRR_BS3;
+        vTaskDelay(pdMS_TO_TICKS(50));
+        GPIOE->BSRR = GPIO_BSRR_BR3;
+        vTaskDelay(pdMS_TO_TICKS(50));
+    }
     return 0;
 }
 
