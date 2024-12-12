@@ -116,13 +116,13 @@ int main(void)
     setup_hrtim();
     setup_i2c();
     setup_uart();
-    HRTIM1_TIMA->PERxR = 1200;
-    HRTIM1_TIMB->PERxR = 1200;
-    HRTIM1_TIMC->PERxR = 1200;
+    HRTIM1_TIMA->PERxR = ~(uint16_t)0;
+    HRTIM1_TIMB->PERxR = ~(uint16_t)0;
+    HRTIM1_TIMC->PERxR = ~(uint16_t)0;
 
     xTaskCreate(vBlinkTask, "blink", 128, NULL, tskIDLE_PRIORITY + 5, NULL);
     xTaskCreate(vEthEchoTask, "echo", 128, NULL, tskIDLE_PRIORITY + 10, NULL);
-    xTaskCreate(vI2CTask, "i2c_hello", 128, NULL, tskIDLE_PRIORITY + 15, NULL);
+    //xTaskCreate(vI2CTask, "i2c_hello", 128, NULL, tskIDLE_PRIORITY + 15, NULL);
 
     vTaskStartScheduler();
     // The function above returns only if something calls vTaskEndScheduler().
