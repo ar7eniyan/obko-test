@@ -11,6 +11,7 @@
 #include "ethernet.h"
 #include "i2c.h"
 #include "uart.h"
+#include "gpio.h"
 
 void setup_clocks(void)
 {
@@ -68,10 +69,7 @@ void setup_clocks(void)
 
 void vBlinkTask(void *pvParameters)
 {
-    SET_RCC_xxxxEN(RCC->AHB4ENR, RCC_AHB4ENR_GPIOEEN);
-    // 01 = GPIO output mode
-    GPIOE->MODER &= ~GPIO_MODER_MODE3_1;
-    GPIOE->MODER |= GPIO_MODER_MODE3_0;
+    gpio_setup_pin(GPIOE, 3, GPIO_FLAGS_MODE_OUT);
 
     for (;;) {
         GPIOE->BSRR = GPIO_BSRR_BS3;

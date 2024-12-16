@@ -14,6 +14,7 @@ set(PROJECT_SOURCES
     src/motors.c
     src/i2c.c
     src/uart.c
+    src/gpio.c
 )
 
 add_executable(${PROJECT_NAME} ${PROJECT_SOURCES})
