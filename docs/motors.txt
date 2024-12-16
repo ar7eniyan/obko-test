@@ -8,8 +8,13 @@ Steering motor: TIM15.
 ENA - PE2, DIR - PE3, PUL - PE5.
 
 Rear left: TIM16.
-ALM - PB4, ENA - PB6, DIR - PB7, PUL - PB8.
+ALM - PB4, ENA - PE0, DIR - PE1, PUL - PB6.
 
 Rear right: TIM17.
-ALM - PB5, ENA - PB3, DIR - PD7, PUL - PB9.
+ALM - PB5, ENA - PB3, DIR - PD7, PUL - PB7.
+
+16.12.2024: Found a problem, PB8 and PB9 are pulled up to 3.3V on the board for
+usage in camera I2C. Solution: use the alternative outputs of the timers,
+TIM16_CH1N on PB6 and TIM17_CH1N on PB7. Change rear left motor's ENA and DIR
+signals to PE0 and PE1. The pinout above is updated. TODO: update the code.
 
