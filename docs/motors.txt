@@ -1,0 +1,15 @@
+Rear motors use TIM16 and TIM17, steering motor uses TIM15. For rear motors
+base frequency is 240 Mhz, after a prescaler of 6000 counter frequency is 40
+kHz. Minimal achievable speed is 2.4 mm/s (0.61 ticks/s). Maximum speed
+allowing less than 3% difference between consecutive settings is 4.9 m/s.
+(1250 ticks/s). Microstepping is obviously disabled.
+
+Steering motor: TIM15.
+ENA - PE2, DIR - PE3, PUL - PE5.
+
+Rear left: TIM16.
+ALM - PB4, ENA - PB6, DIR - PB7, PUL - PB8.
+
+Rear right: TIM17.
+ALM - PB5, ENA - PB3, DIR - PD7, PUL - PB9.
+
