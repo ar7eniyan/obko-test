@@ -1,4 +1,3 @@
-#include <stdint.h>
 #include <string.h>
 
 #include "FreeRTOS.h"
@@ -37,7 +36,7 @@ void setup_clocks(void)
     while (~RCC->CR & RCC_CR_HSERDY);
 
     // HSE as PLL source, prescaler 5 for PLL1
-    RCC->PLLCKSELR = (0b10 << RCC_PLLCKSELR_PLLSRC_Pos) | (0b000101 << RCC_PLLCKSELR_DIVM1_Pos);
+    RCC->PLLCKSELR = (0b10 << RCC_PLLCKSELR_PLLSRC_Pos) | (5 << RCC_PLLCKSELR_DIVM1_Pos);
     // PLL1 range from 4MHz to 8MHz, P and Q outputs enabled
     RCC->PLLCFGR = RCC_PLLCFGR_PLL1RGE_2 | RCC_PLLCFGR_DIVP1EN | RCC_PLLCFGR_DIVQ1EN;
     // PLL1 multiplication by 192, division by 2 on P and Q outputs
@@ -55,6 +54,66 @@ void setup_clocks(void)
     RCC->D2CFGR = (0b100 << RCC_D2CFGR_D2PPRE1_Pos) | (0b100 << RCC_D2CFGR_D2PPRE2_Pos);
     // D3PPRE prescaler to 2
     RCC->D3CFGR = (0b100 << RCC_D3CFGR_D3PPRE_Pos);
+/*
+    // I2C clk mux.
+    RCC->PLLCFGR |= (RCC_PLLCFGR_PLL3RGE_2 |
+                     RCC_PLLCFGR_PLL3VCOSEL);
+
+    RCC->PLLCKSELR |= (25 << RCC_PLLCKSELR_DIVM3_Pos);
+    RCC->PLL3DIVR = ((150 << RCC_PLL3DIVR_N3_Pos) |
+                    (3 << RCC_PLL3DIVR_R3_Pos) |
+                    (2 << RCC_PLL3DIVR_Q3_Pos));
+
+    RCC->CR |= RCC_CR_PLL3ON;
+    while((RCC->CR & RCC_CR_PLL3RDY) == 0);
+
+    // PLL3R as clock sourse for I2C1
+    RCC->D2CCIP2R &= ~RCC_D2CCIP2R_I2C123SEL_Msk;
+    RCC->D2CCIP2R |= (0b01 << RCC_D2CCIP2R_I2C123SEL_Pos);
+*/
+    // 6. Настройка тактирования для I2C1 (PLL3 для 50 МГц)
+    RCC->PLLCKSELR |= (25 << RCC_PLLCKSELR_DIVM3_Pos);
+    RCC->PLLCFGR |= RCC_PLLCFGR_PLL3RGE_2 | RCC_PLLCFGR_PLL3VCOSEL;
+
+    RCC->PLL3DIVR = ((150 << RCC_PLL3DIVR_N3_Pos) |  // Умножитель 150
+                     (3 << RCC_PLL3DIVR_R3_Pos)  |  // Делитель на выходе R = 4
+                     (2 << RCC_PLL3DIVR_Q3_Pos));   // Делитель на выходе Q = 3
+/*
+    RCC->CR |= RCC_CR_PLL3ON;
+    while (!(RCC->CR & RCC_CR_PLL3RDY)); // Ожидание готовности PLL3
+
+    // Установка PLL3R как источник тактирования для I2C1
+    RCC->D2CCIP2R = (RCC->D2CCIP2R & ~RCC_D2CCIP2R_I2C123SEL_Msk) |
+                    (0b01 << RCC_D2CCIP2R_I2C123SEL_Pos);
+
+    // 7. Переключение системы на PLL1
+    RCC->CFGR |= RCC_CFGR_SW_PLL1; // Использование PLL1 как системного такта
+    while ((RCC->CFGR & RCC_CFGR_SWS_Msk) != RCC_CFGR_SWS_PLL1); // Ожидание готовности PLL1
+*/
+    RCC->PLLCFGR |= RCC_PLLCFGR_DIVR3EN; // Включаем выход R для PLL3
+
+    // 6. Включение PLL1 и PLL3
+    RCC->CR |= RCC_CR_PLL1ON | RCC_CR_PLL3ON;
+    while (!(RCC->CR & RCC_CR_PLL1RDY)); // Ожидание готовности PLL1
+    while (!(RCC->CR & RCC_CR_PLL3RDY)); // Ожидание готовности PLL3
+
+    // 7. Настройка предделителей шин
+    RCC->D1CFGR = RCC_D1CFGR_HPRE_DIV2 | // Делитель AHB = 2
+                  RCC_D1CFGR_D1PPRE_DIV2; // Делитель APB3 = 2
+
+    RCC->D2CFGR = RCC_D2CFGR_D2PPRE1_DIV2 | // Делитель APB1 = 2
+                  RCC_D2CFGR_D2PPRE2_DIV2;  // Делитель APB2 = 2
+
+    RCC->D3CFGR = RCC_D3CFGR_D3PPRE_DIV2; // Делитель APB4 = 2
+
+    // 8. Установка PLL3R как источник тактирования для I2C1
+    RCC->D2CCIP2R = (RCC->D2CCIP2R & ~RCC_D2CCIP2R_I2C123SEL_Msk) |
+                    (0b01 << RCC_D2CCIP2R_I2C123SEL_Pos);
+
+    // 9. Переключение системы на PLL1
+    RCC->CFGR |= RCC_CFGR_SW_PLL1; // Использование PLL1 как системного такта
+    while ((RCC->CFGR & RCC_CFGR_SWS_Msk) != RCC_CFGR_SWS_PLL1); // Ожидание готовности PLL1
+
 
     // TODO: Need to wait for 16 cycles of the slowest of all APB clocks
     for (int delay = 100; delay--; );
@@ -97,13 +156,13 @@ void vEthEchoTask(void *pvParameters)
     vTaskDelete(NULL);
 }
 
-void vI2CTask(void *pvParameters)
+void vI2CReadEncoder(void *pvParameters)
 {
-    char test_i2c_data[] = "Hello\n";
+    char test_i2c_data[] = "Hello";
 
     for (;;) {
-        i2c_master_transmit(0x77, test_i2c_data);
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        i2c_master_transmit(I2C1, I2C_ENC_ADDR, test_i2c_data, sizeof(test_i2c_data));
+        vTaskDelay(pdMS_TO_TICKS(100));
     }
     vTaskDelete(NULL);
 }
@@ -113,7 +172,7 @@ int main(void)
     setup_clocks();
     // setup_hrtim();
     setup_motors();
-    // setup_i2c();
+    setup_i2c();
     // setup_uart();
     // HRTIM1_TIMA->PERxR = ~(uint16_t)0;
     // HRTIM1_TIMB->PERxR = ~(uint16_t)0;
@@ -128,11 +187,18 @@ int main(void)
     xTaskCreate(vBlinkTask, "blink", 128, NULL, tskIDLE_PRIORITY + 5, NULL);
     xTaskCreate(vEthEchoTask, "echo", 128, NULL, tskIDLE_PRIORITY + 10, NULL);
     //xTaskCreate(vI2CTask, "i2c_hello", 128, NULL, tskIDLE_PRIORITY + 15, NULL);
+    xTaskCreate(vI2CReadEncoder, "encoder_steering", 128, NULL, tskIDLE_PRIORITY + 2, NULL);
 
     vTaskStartScheduler();
     // The function above returns only if something calls vTaskEndScheduler().
     // The choice here is to treat as a bug and hang the CPU.
-    for(;;);
+    gpio_setup_pin(GPIOE, 3, GPIO_FLAGS_MODE_OUT);
+    for(;;) {
+        GPIOE->BSRR = GPIO_BSRR_BS3;
+        vTaskDelay(pdMS_TO_TICKS(50));
+        GPIOE->BSRR = GPIO_BSRR_BR3;
+        vTaskDelay(pdMS_TO_TICKS(50));
+    }
     return 0;
 }
 
