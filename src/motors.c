@@ -1,5 +1,6 @@
 #include "motors.h"
 
+#include "gpio.h"
 #include "stm32h7xx.h"
 #include "stm32h743xx.h"
 
@@ -25,13 +26,13 @@ void setup_motors(void)
     TIM15->CCMR1 = (0b110 << TIM_CCMR1_OC1M_Pos) | TIM_CCMR1_OC1PE;
     TIM16->CCMR1 = (0b110 << TIM_CCMR1_OC1M_Pos) | TIM_CCMR1_OC1PE;
     TIM17->CCMR1 = (0b110 << TIM_CCMR1_OC1M_Pos) | TIM_CCMR1_OC1PE;
-    // Setup break functionality
-    TIM15->AF1 = TIM15_AF1_BKINE | TIM15_AF1_BKINP;
-    TIM15->BDTR = TIM_BDTR_MOE | TIM_BDTR_BKP | TIM_BDTR_BKE | TIM_BDTR_OSSI;
+    // Setup break functionality on rear wheel timers, enable output
+    // (disable for now, TODO: pull down break input)
+    TIM15->BDTR = TIM_BDTR_MOE;
     TIM16->AF1 = TIM16_AF1_BKINE | TIM16_AF1_BKINP;
-    TIM16->BDTR = TIM_BDTR_MOE | TIM_BDTR_BKP | TIM_BDTR_BKE | TIM_BDTR_OSSI;
+    TIM16->BDTR = TIM_BDTR_MOE; // | TIM_BDTR_BKP | TIM_BDTR_BKE | TIM_BDTR_OSSI;
     TIM17->AF1 = TIM17_AF1_BKINE | TIM17_AF1_BKINP;
-    TIM17->BDTR = TIM_BDTR_MOE | TIM_BDTR_BKP | TIM_BDTR_BKE | TIM_BDTR_OSSI;
+    TIM17->BDTR = TIM_BDTR_MOE; // | TIM_BDTR_BKP | TIM_BDTR_BKE | TIM_BDTR_OSSI;
     // Enable channel 1 non-inversed output
     TIM15->CCER = TIM_CCER_CC1E;
     TIM16->CCER = TIM_CCER_CC1E;
@@ -56,9 +57,8 @@ void setup_motors(void)
         (0b10 << GPIO_MODER_MODE4_Pos) | (0b10 << GPIO_MODER_MODE5_Pos) |
         (0b10 << GPIO_MODER_MODE8_Pos) | (0b10 << GPIO_MODER_MODE9_Pos));
 
-    GPIOE->OTYPER |= GPIO_OTYPER_OT5;
-    MODIFY_REG(GPIOE->AFR[0], GPIO_AFRL_AFSEL5, 0b0100 << GPIO_AFRL_AFSEL5_Pos);
-    MODIFY_REG(GPIOE->MODER, GPIO_MODER_MODE5, (0b10 << GPIO_MODER_MODE5_Pos));
+    gpio_setup_pin(GPIOE, 5,
+        GPIO_FLAGS_MODE_AF | GPIO_FLAGS_OTYPE_OD | GPIO_FLAGS_AFSEL_AF4);
 }
 
 void motor_steering_write(uint16_t period_ticks)
