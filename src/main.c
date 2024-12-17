@@ -218,12 +218,10 @@ int main(void)
     setup_motors();
     //setup_i2c();
     //setup_uart();
-    motor_steering_write(~(uint16_t)0);
-    motor_rear_left_write(~(uint16_t)0);
-    motor_rear_right_write(~(uint16_t)0);
-    //motor_steering_write(10000);
-    //motor_rear_left_write(10000);
-    //motor_rear_right_write(10000);
+    // Somewhere around the minimum speed possible
+    motor_steering_drive(0.02);
+    motor_rear_left_drive(0.02);
+    motor_rear_right_drive(0.02);
 
     xTaskCreate(vBlinkTask, "blink", 128, NULL, tskIDLE_PRIORITY + 5, NULL);
     xTaskCreate(vEthPingTask, "echo", 128, NULL, tskIDLE_PRIORITY + 10, NULL);
