@@ -202,13 +202,9 @@ void vEthPingTask(void *pvParameters)
 int main(void)
 {
     setup_clocks();
-    // setup_hrtim();
     setup_motors();
     setup_i2c();
     // setup_uart();
-    // HRTIM1_TIMA->PERxR = ~(uint16_t)0;
-    // HRTIM1_TIMB->PERxR = ~(uint16_t)0;
-    // HRTIM1_TIMC->PERxR = ~(uint16_t)0;
     motor_steering_write(~(uint16_t)0);
     motor_rear_left_write(~(uint16_t)0);
     motor_rear_right_write(~(uint16_t)0);
