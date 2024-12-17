@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include <string.h>
 
 #include "FreeRTOS.h"
@@ -10,6 +11,7 @@
 #include "ethernet.h"
 #include "i2c.h"
 #include "uart.h"
+#include "config.h"
 #include "gpio.h"
 
 void setup_clocks(void)
@@ -167,6 +169,36 @@ void vI2CReadEncoder(void *pvParameters)
     vTaskDelete(NULL);
 }
 
+void vEthPingTask(void *pvParameters)
+{
+    // 6 (DA) + 6 (SA) + 2 (EtherType) + 48 (ping msg)
+    char *tx_buf, *rx_buf;
+    int rx_len;
+    eth_setup(&tx_buf);
+
+    for (;;) {
+        if ((rx_len = eth_recv(&rx_buf)) != -1){
+            if (rx_len < 14 + 8) {
+                continue;
+            }
+            if (memcmp(&rx_buf[14], "ping", 4) != 0 ||
+                memcmp(&rx_buf[rx_len - 4], "ping", 4) != 0) {
+                continue;
+            }
+            for (size_t i = 14; i < rx_len - 4; i++) {
+                if (rx_buf[i] != 0x20) {
+                    continue;
+                }
+            }
+            memcpy(tx_buf, rx_buf + 6, rx_len - 6);
+            memcpy(&tx_buf[8], "pong", 4);
+            memcpy(&tx_buf[rx_len - 4 - 6], "pong", 4);
+            eth_send(rx_len - 6, &tx_buf);
+        }
+    }
+    vTaskDelete(NULL);
+}
+
 int main(void)
 {
     setup_clocks();
@@ -185,7 +217,7 @@ int main(void)
     //motor_rear_right_write(10000);
 
     xTaskCreate(vBlinkTask, "blink", 128, NULL, tskIDLE_PRIORITY + 5, NULL);
-    xTaskCreate(vEthEchoTask, "echo", 128, NULL, tskIDLE_PRIORITY + 10, NULL);
+    xTaskCreate(vEthPingTask, "echo", 128, NULL, tskIDLE_PRIORITY + 10, NULL);
     //xTaskCreate(vI2CTask, "i2c_hello", 128, NULL, tskIDLE_PRIORITY + 15, NULL);
     xTaskCreate(vI2CReadEncoder, "encoder_steering", 128, NULL, tskIDLE_PRIORITY + 2, NULL);
 
