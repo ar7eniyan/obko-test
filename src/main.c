@@ -216,8 +216,8 @@ int main(void)
 {
     setup_clocks();
     setup_motors();
-    setup_i2c();
-    // setup_uart();
+    //setup_i2c();
+    //setup_uart();
     motor_steering_write(~(uint16_t)0);
     motor_rear_left_write(~(uint16_t)0);
     motor_rear_right_write(~(uint16_t)0);
@@ -228,7 +228,7 @@ int main(void)
     xTaskCreate(vBlinkTask, "blink", 128, NULL, tskIDLE_PRIORITY + 5, NULL);
     xTaskCreate(vEthPingTask, "echo", 128, NULL, tskIDLE_PRIORITY + 10, NULL);
     //xTaskCreate(vI2CTask, "i2c_hello", 128, NULL, tskIDLE_PRIORITY + 15, NULL);
-    xTaskCreate(vI2CReadEncoder, "encoder_steering", 128, NULL, tskIDLE_PRIORITY + 2, NULL);
+    //xTaskCreate(vI2CReadEncoder, "encoder_steering", 128, NULL, tskIDLE_PRIORITY + 2, NULL);
 
     vTaskStartScheduler();
     // The function above returns only if something calls vTaskEndScheduler().
