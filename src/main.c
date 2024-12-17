@@ -199,6 +199,19 @@ void vEthPingTask(void *pvParameters)
     vTaskDelete(NULL);
 }
 
+void __attribute__((__noreturn__)) panic(void)
+{
+    // Blink an on-board LED forever
+    gpio_setup_pin(GPIOE, 3, GPIO_FLAGS_MODE_OUT);
+    for(;;) {
+        GPIOE->BSRR = GPIO_BSRR_BS3;
+        // TODO: replace with hand-written delays not depending on the OS
+        vTaskDelay(pdMS_TO_TICKS(50));
+        GPIOE->BSRR = GPIO_BSRR_BR3;
+        vTaskDelay(pdMS_TO_TICKS(50));
+    }
+}
+
 int main(void)
 {
     setup_clocks();
@@ -220,13 +233,7 @@ int main(void)
     vTaskStartScheduler();
     // The function above returns only if something calls vTaskEndScheduler().
     // The choice here is to treat as a bug and hang the CPU.
-    gpio_setup_pin(GPIOE, 3, GPIO_FLAGS_MODE_OUT);
-    for(;;) {
-        GPIOE->BSRR = GPIO_BSRR_BS3;
-        vTaskDelay(pdMS_TO_TICKS(50));
-        GPIOE->BSRR = GPIO_BSRR_BR3;
-        vTaskDelay(pdMS_TO_TICKS(50));
-    }
+    panic();
     return 0;
 }
 
