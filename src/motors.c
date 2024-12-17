@@ -27,38 +27,47 @@ void setup_motors(void)
     TIM16->CCMR1 = (0b110 << TIM_CCMR1_OC1M_Pos) | TIM_CCMR1_OC1PE;
     TIM17->CCMR1 = (0b110 << TIM_CCMR1_OC1M_Pos) | TIM_CCMR1_OC1PE;
     // Setup break functionality on rear wheel timers, enable output
-    // (disable for now, TODO: pull down break input)
-    TIM15->BDTR = TIM_BDTR_MOE;
+    TIM15->BDTR = TIM_BDTR_OSSI | TIM_BDTR_OSSR | TIM_BDTR_MOE;
+    TIM16->BDTR = TIM_BDTR_OSSI | TIM_BDTR_OSSR | TIM_BDTR_MOE |
+        TIM_BDTR_BKE | TIM_BDTR_BKP;
+    TIM17->BDTR = TIM_BDTR_OSSI | TIM_BDTR_OSSR | TIM_BDTR_MOE |
+        TIM_BDTR_BKE | TIM_BDTR_BKP;
+    // Enable BKIN break input on rear wheel timers
     TIM16->AF1 = TIM16_AF1_BKINE | TIM16_AF1_BKINP;
-    TIM16->BDTR = TIM_BDTR_MOE; // | TIM_BDTR_BKP | TIM_BDTR_BKE | TIM_BDTR_OSSI;
     TIM17->AF1 = TIM17_AF1_BKINE | TIM17_AF1_BKINP;
-    TIM17->BDTR = TIM_BDTR_MOE; // | TIM_BDTR_BKP | TIM_BDTR_BKE | TIM_BDTR_OSSI;
-    // Enable channel 1 non-inversed output
+    // Enable channel 1 output (use complementary on TIM16 and TIM17 because
+    // of pinout).
     TIM15->CCER = TIM_CCER_CC1E;
-    TIM16->CCER = TIM_CCER_CC1E;
-    TIM17->CCER = TIM_CCER_CC1E;
+    TIM16->CCER = TIM_CCER_CC1NE;
+    TIM17->CCER = TIM_CCER_CC1NE;
     // Start the counter (for later, now it's stopped because of ARR == 0)
     TIM15->CR1 |= TIM_CR1_CEN;
     TIM16->CR1 |= TIM_CR1_CEN;
     TIM17->CR1 |= TIM_CR1_CEN;
 
-    SET_RCC_xxxxEN(RCC->AHB4ENR,
-        RCC_AHB4ENR_GPIOBEN | RCC_AHB4ENR_GPIODEN | RCC_AHB4ENR_GPIOEEN);
-
-    GPIOB->OTYPER |= GPIO_OTYPER_OT4_Pos | GPIO_OTYPER_OT5_Pos |
-        GPIO_OTYPER_OT8_Pos | GPIO_OTYPER_OT9_Pos;
-    MODIFY_REG(GPIOB->AFR[0], GPIO_AFRL_AFSEL4 | GPIO_AFRL_AFSEL5,
-        (0b0001 << GPIO_AFRL_AFSEL4_Pos) | (0b0001 << GPIO_AFRL_AFSEL5_Pos));
-    MODIFY_REG(GPIOB->AFR[1], GPIO_AFRH_AFSEL8 | GPIO_AFRH_AFSEL9,
-        (0b0001 << GPIO_AFRH_AFSEL8_Pos) | (0b0001 << GPIO_AFRH_AFSEL9_Pos));
-    MODIFY_REG(GPIOB->MODER,
-        GPIO_MODER_MODE4 | GPIO_MODER_MODE5 |
-        GPIO_MODER_MODE8 | GPIO_MODER_MODE9,
-        (0b10 << GPIO_MODER_MODE4_Pos) | (0b10 << GPIO_MODER_MODE5_Pos) |
-        (0b10 << GPIO_MODER_MODE8_Pos) | (0b10 << GPIO_MODER_MODE9_Pos));
-
+    // Configure GPIO blocks for motor drivers' pins: PUL
+    gpio_setup_pin(GPIOB, 6,
+        GPIO_FLAGS_MODE_AF | GPIO_FLAGS_OTYPE_OD | GPIO_FLAGS_AFSEL_AF1);
+    gpio_setup_pin(GPIOB, 7,
+        GPIO_FLAGS_MODE_AF | GPIO_FLAGS_OTYPE_OD | GPIO_FLAGS_AFSEL_AF1);
     gpio_setup_pin(GPIOE, 5,
         GPIO_FLAGS_MODE_AF | GPIO_FLAGS_OTYPE_OD | GPIO_FLAGS_AFSEL_AF4);
+
+    // ALM
+    gpio_setup_pin(GPIOB, 4,
+        GPIO_FLAGS_MODE_AF | GPIO_FLAGS_AFSEL_AF1 | GPIO_FLAGS_PUPD_PD);
+    gpio_setup_pin(GPIOB, 5,
+        GPIO_FLAGS_MODE_AF | GPIO_FLAGS_AFSEL_AF1 | GPIO_FLAGS_PUPD_PD);
+
+    // ENA
+    gpio_setup_pin(GPIOB, 3, GPIO_FLAGS_MODE_OUT | GPIO_FLAGS_OTYPE_OD);
+    gpio_setup_pin(GPIOE, 0, GPIO_FLAGS_MODE_OUT | GPIO_FLAGS_OTYPE_OD);
+    gpio_setup_pin(GPIOE, 2, GPIO_FLAGS_MODE_OUT | GPIO_FLAGS_OTYPE_OD);
+
+    // DIR
+    gpio_setup_pin(GPIOD, 7, GPIO_FLAGS_MODE_OUT | GPIO_FLAGS_OTYPE_OD);
+    gpio_setup_pin(GPIOE, 1, GPIO_FLAGS_MODE_OUT | GPIO_FLAGS_OTYPE_OD);
+    gpio_setup_pin(GPIOE, 4, GPIO_FLAGS_MODE_OUT | GPIO_FLAGS_OTYPE_OD);
 }
 
 void motor_steering_write(uint16_t period_ticks)
