@@ -2,6 +2,7 @@
 - CMake and GNU Make
 - `arm-none-eabi` compiler toolchain (from STM32CubeIDE package directory or [here](https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads))
 - STM32Cube package for your MCU family like the one STM32CubeIDE downloads (from STM32CubeIDE package directory, ST website or [GitHub](https://github.com/STMicroelectronics/STM32Cube_MCU_Overall_Offer#stm32cube-mcu-packages))
+- `st-flash` utility from [this toolset](https://github.com/stlink-org/stlink)
 
 ### Cloning the repo
 ```
