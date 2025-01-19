@@ -1,6 +1,12 @@
 ### Dependencies
-- `arm-none-eabi` compiler toolchain
-- STM32Cube package for your MCU family like the one STM32CubeIDE downloads from a repository
+- CMake and GNU Make
+- `arm-none-eabi` compiler toolchain (from STM32CubeIDE package directory or [here](https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads))
+- STM32Cube package for your MCU family like the one STM32CubeIDE downloads (from STM32CubeIDE package directory, ST website or [GitHub](https://github.com/STMicroelectronics/STM32Cube_MCU_Overall_Offer#stm32cube-mcu-packages))
+
+### Cloning the repo
+```
+git clone --recurse-submodules https://github.com/ar7eniyan/obko-test.git
+```
 
 ### Build process
 Create your `CMakeUserPresets.json`:
