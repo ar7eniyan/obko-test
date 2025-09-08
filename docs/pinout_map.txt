@@ -1,0 +1,87 @@
+On-board connections: Push [B]utton, [D]CMI, [L]ED [M]icroSD, [Q]SPI, [S]PIx, [T]FT-LCD
+RR - TIM15 (CH2), RL - TIM17 (CH1N), ST - TIM8 (CH1N)
+
+  | A00 - RR_ALM
+  | A01 - RMII_REF_CLK
+  | A02 - RMII_MDIO
+  | A03 - RR_PUL
+D | A04 - ST_DIR
+  | A05 - ST_PUL
+D | A06 - ST_ALM
+d | A07 - RMII_CRS_DV
+D | A08
+  | A09
+  | A10
+  | A11
+  | A12
+  X A13 - SWDIO
+  X A14 - SWCLK
+  | A15
+
+  | B00 - ST_ENA
+  | B01 - RL_DIR
+Q | B02
+S | B03
+S | B04
+  | B05 - RL_ALM
+Q | B06 (100K PU)
+D | B07 - RL_PUL
+D | B08 - I2C_SCL (4.7K PU)
+D | B09 - I2C_SDA (4.7K PU)
+  | B10 - IMU_DRDY
+  | B11 - RMII_TX_EN
+  | B12 - RMII_TXD0
+  | B13 - RMII_TXD1
+  | B14
+  | B15
+
+  | C00
+  | C01 - RMII_MDC
+  | C02 - RR_DIR
+  | C03 - RR_ENA
+  | C04 - RMII_RXD0
+  | C05 - RMII_RXD1
+D | C06
+D | C07
+M | C08 (47K PU)
+M | C09 (47K PU)
+M | C10 (47K PU)
+M | C11 (47K PU)
+M | C12
+B | C13
+  X C14 - OSC32_IN
+  X C15 - OSC32_OUT
+
+  | D00
+  | D01
+M | D02 (47K PU)
+D | D03
+m | D04
+  | D05
+S~| D06 (100K PU~)
+S | D07
+  | D08
+  | D09
+  | D10
+Q | D11
+Q | D12
+Q | D13
+  | D14 - RL_ENA
+  | D15
+
+D | E00 - I2C_A1
+D | E01 - I2C_A0
+Q | E02
+L | E03
+D | E04
+D | E05
+D | E06
+  | E07
+  | E08 - IMU_FSYNC
+  | E09
+T | E10 (10K PU)
+T | E11 (100K PU)
+T | E12
+T | E13
+T | E14
+  | E15 - IMU_INTA
